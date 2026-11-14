@@ -1390,10 +1390,33 @@ void View::calculate_tick_spacing()
 				(ScaleUnits[unit++] + tp_margin);
 		} while (tp_with_margin < min_period && unit < countof(ScaleUnits));
 
-		minor_tick_count_ = (unit == 2) ? 8 : 10;
+		/* Five divisions between the major ticks, four on the 2-steps:
+		 * the marks stay readable without the comb the ten made. */
+		minor_tick_count_ = (unit == 2) ? 4 : 5;
 		tick_period = order_decimal * ScaleUnits[unit - 1];
-		tick_prefix = static_cast<pv::util::SIPrefix>(
-			(order - pv::util::exponent(pv::util::SIPrefix::yocto)) / 3);
+
+		/*
+		 * The order-derived prefix leans small: a tick of 500 µs answers
+		 * as "+500 µs", and a label like "+1672 µs" is four digits that
+		 * read worse than "0.5 ms" and "1.7 ms". Where the label formatter
+		 * answers in SI units at all - ticks below a minute; the bigger
+		 * ones come back as minutes, and no prefix shows - take the
+		 * largest prefix that keeps the tick at a tenth of the unit and
+		 * up, so the numbers run 0.5, 1, 1.5 and not 500, 1000, 1500.
+		 */
+		if (tick_period < Timestamp(60)) {
+			Timestamp unit = Timestamp(1);
+			pv::util::SIPrefix p = pv::util::SIPrefix::none;
+			while ((p > pv::util::SIPrefix::yocto) &&
+				(tick_period < unit / 10)) {
+				unit /= 1000;
+				p = static_cast<pv::util::SIPrefix>(static_cast<int>(p) - 1);
+			}
+			tick_prefix = p;
+		} else {
+			tick_prefix = static_cast<pv::util::SIPrefix>(
+				(order - pv::util::exponent(pv::util::SIPrefix::yocto)) / 3);
+		}
 
 		// Precision is the number of fractional digits required, not
 		// taking the prefix into account (and it must never be negative)
