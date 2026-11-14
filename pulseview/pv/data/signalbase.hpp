@@ -116,7 +116,14 @@ public:
 	};
 
 	static const QColor AnalogSignalColors[8];
-	static const QColor LogicSignalColors[4];
+	/*
+	 * The color of the label of logic channel `index`: eight hues spread
+	 * around the wheel, with the lightness alternating between neighbours
+	 * so that sixteen channels stay distinguishable, in both themes. The
+	 * waveforms themselves are black or white with the theme; this is
+	 * what the labels and the colored-background option take.
+	 */
+	static QColor logic_signal_color(uint32_t index, bool dark_theme);
 	int height_;
 
 	atomic<uint64_t> start_decode_pos_;

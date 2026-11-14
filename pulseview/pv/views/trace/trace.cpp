@@ -35,6 +35,7 @@
 #include "tracepalette.hpp"
 #include "view.hpp"
 #include <QColor>
+#include "pv/data/logic.hpp"
 #include "pv/globalsettings.hpp"
 #include "pv/widgets/colorbutton.hpp"
 #include "pv/widgets/popup.hpp"
@@ -331,24 +332,36 @@ void Trace::paint_back(QPainter &p, ViewItemPaintParams &pp)
 
 	if (base_->type() == base_->LogicChannel) {
 		GlobalSettings settings;
-		QPen pen;
-		pen.setStyle(Qt::DashLine);
 
-		if (settings.current_theme_is_dark()){
-			dark.setAlpha(100);
-			pen.setColor(dark);
-		}
-		else{
-			bright.setAlpha(100);
-			pen.setColor(bright);
-		}
+		/*
+		 * The dashed guide down the middle is for a row that has nothing
+		 * else to show: a channel that is switched off, or one whose data
+		 * has not arrived yet. Over a row that paints its waveform it
+		 * read as a second line - an idle channel looked like two.
+		 */
+		const shared_ptr<data::Logic> logic = base_->logic_data();
+		const bool has_data = logic && !logic->logic_segments().empty();
 
-		p.setPen(pen);
-		
-		const int top = get_visual_y() + extents.first;
-		const int btm = get_visual_y() + extents.second;
-		float y = top + ((btm - top) / 2.0);
-		p.drawLine(pp.left(), y, pp.right(), y);
+		if (!base_->enabled() || !has_data) {
+			QPen pen;
+			pen.setStyle(Qt::DashLine);
+
+			if (settings.current_theme_is_dark()){
+				dark.setAlpha(100);
+				pen.setColor(dark);
+			}
+			else{
+				bright.setAlpha(100);
+				pen.setColor(bright);
+			}
+
+			p.setPen(pen);
+
+			const int top = get_visual_y() + extents.first;
+			const int btm = get_visual_y() + extents.second;
+			float y = top + ((btm - top) / 2.0);
+			p.drawLine(pp.left(), y, pp.right(), y);
+		}
 	}
 
 	if (view->colored_bg())

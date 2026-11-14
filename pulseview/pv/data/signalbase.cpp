@@ -31,6 +31,7 @@
 #include <QDebug>
 
 #include <extdef.h>
+#include <pv/globalsettings.hpp>
 #include <pv/session.hpp>
 #include <pv/binding/decoder.hpp>
 
@@ -56,13 +57,21 @@ const QColor SignalBase::AnalogSignalColors[8] =
 	QColor(0x80, 0x20, 0x24)	// Red      HSV: 358 /  75 / 50
 };
 
-const QColor SignalBase::LogicSignalColors[4] =
+QColor SignalBase::logic_signal_color(uint32_t index, bool dark_theme)
 {
-	QColor(170, 0, 0),
-	QColor(180, 160, 50),
-	QColor(65, 105, 225),
-	QColor(50, 120, 70),
-};
+	/*
+	 * Four colors over sixteen channels meant four channels wearing the
+	 * same label. Eight hues 45 degrees apart, neighbours differing in
+	 * lightness as well, keep a channel apart from the ones on either
+	 * side of it and from the one eight rows down. The dark theme lifts
+	 * the lightness so the labels hold their own against the near-black
+	 * canvas; the light theme settles deeper for the same reason.
+	 */
+	const int hue = (index % 8) * 45;
+	const bool high = (index % 2) == 0;
+	const int lightness = dark_theme ? (high ? 62 : 50) : (high ? 48 : 38);
+	return QColor::fromHsl(hue, 185, lightness * 255 / 100);
+}
 
 const int SignalBase::ColorBGAlpha = 8 * 256 / 100;
 const uint64_t SignalBase::ConversionBlockSize = 4096;
@@ -145,8 +154,10 @@ SignalBase::SignalBase(shared_ptr<sigrok::Channel> channel, ChannelType channel_
 
 	// Only logic and analog SR channels can have their colors auto-set
 	// because for them, we have an index that can be used
-	if (channel_type == LogicChannel)
-		set_color(LogicSignalColors[index() % countof(LogicSignalColors)]);
+	if (channel_type == LogicChannel) {
+		GlobalSettings settings;
+		set_color(logic_signal_color(index(), settings.current_theme_is_dark()));
+	}
 	else if (channel_type == AnalogChannel)
 		set_color(AnalogSignalColors[index() % countof(AnalogSignalColors)]);
 }

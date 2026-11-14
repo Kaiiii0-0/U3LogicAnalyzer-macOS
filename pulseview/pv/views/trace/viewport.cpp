@@ -234,11 +234,13 @@ void Viewport::paintEvent(QPaintEvent*)
         [](const shared_ptr<TimeItem> &t) { return !t; }));
 
     QPainter p(this);
-	
-    // Disable antialiasing for high‑DPI displays
-    bool use_antialiasing =
-        window()->windowHandle()->screen()->devicePixelRatio() < 2.0;
-    p.setRenderHint(QPainter::Antialiasing, use_antialiasing);
+
+    /* Antialiasing everywhere. It used to be switched off on screens with
+     * a device pixel ratio of 2 and up, which is every Mac of recent
+     * years - the stair-stepped verticals it left behind were the single
+     * most dated thing about the canvas. The hint's cost is noise next
+     * to the block retrieval the trace painting itself does. */
+    p.setRenderHint(QPainter::Antialiasing, true);
 
     for (LayerPaintFunc *paint_func = layer_paint_funcs;
             *paint_func; paint_func++) {

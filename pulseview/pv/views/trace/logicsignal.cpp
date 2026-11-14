@@ -160,6 +160,13 @@ void LogicSignal::refresh_theme_colors()
     HighColor.setAlpha(255);
     LowColor.setAlpha(255);
     SamplingPointColor.setAlpha(255);
+
+    /* The label wears the color of the theme it was built under; a
+     * switch of the theme re-derives it here, and set_color() brings
+     * the colored-background variant along with it. */
+    if (base_)
+        base_->set_color(data::SignalBase::logic_signal_color(
+            base_->index(), settings.current_theme_is_dark()));
 }
 
 void LogicSignal::refresh_trigger_icons()
