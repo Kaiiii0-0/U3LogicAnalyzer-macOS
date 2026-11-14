@@ -24,6 +24,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QFontMetrics>
+#include <QHeaderView>
 #include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
@@ -221,6 +222,21 @@ SubWindow::SubWindow(Session& session, QWidget* parent) :
 	tree_view_->resizeColumnToContents(0);
 
 	tree_view_->setIndentation(10);
+
+	/*
+	 * Roomier rows, and a hover and a selection that read as one: this
+	 * tree is the index of a hundred and thirty-odd decoders, and its
+	 * rows sat tight under their branch arrows. The mid-gray of the
+	 * hover and of the selection is the same the toolbar buttons wear,
+	 * which holds on both themes.
+	 */
+	tree_view_->setUniformRowHeights(true);
+	tree_view_->header()->hide();
+	tree_view_->setStyleSheet(
+		"QTreeView { background: transparent; border: none; }"
+		"QTreeView::item { height: 26px; }"
+		"QTreeView::item:hover { background: rgba(128, 128, 128, 70); }"
+		"QTreeView::item:selected { background: rgba(128, 128, 128, 110); }");
 
 #if (!DECODERS_HAVE_TAGS)
 	tree_view_->expandAll();

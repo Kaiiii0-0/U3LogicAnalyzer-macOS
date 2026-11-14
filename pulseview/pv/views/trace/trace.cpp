@@ -129,63 +129,37 @@ void Trace::on_setting_changed(const QString &key, const QVariant &value)
 
 void Trace::paint_label(QPainter &p, const QRect &rect, bool hover)
 {
-	int y = get_visual_y();
-	p.setBrush(base_->color());
-	QPointF Point;
 	if (!enabled())
 		return;
 
 	QRectF r = label_rect(rect);
-	if (base_->type() == base_->LogicChannel){
-		const pair<int, int> extents = v_extents();
-		const int top = get_visual_y() + extents.first;
-		const int btm = get_visual_y() + extents.second;
-		y = top + ((btm - top) / 2.0);
-	}
-	// When selected, move the arrow to the left so that the border can show
-	const QPointF offs = (selected()) ? QPointF(-2, 0) : QPointF(0, 0);
 
-	// Paint the label
-	const float label_arrow_length = r.height() / 2;
-	QPointF points[] = {
-		offs + r.topLeft(),
-		offs + QPointF(r.right() - label_arrow_length, r.top()),
-		offs + QPointF(r.right(), y),
-		offs + QPointF(r.right() - label_arrow_length, r.bottom()),
-		offs + r.bottomLeft()
-	};
-	QPointF highlight_points[] = {
-		offs + QPointF(r.left() + 1, r.top() + 1),
-		offs + QPointF(r.right() - label_arrow_length, r.top() + 1),
-		offs + QPointF(r.right() - 1, y),
-		offs + QPointF(r.right() - label_arrow_length, r.bottom() - 1),
-		offs + QPointF(r.left() + 1, r.bottom() - 1)
-	};
+	/*
+	 * A rounded rectangle, flat: the arrow with its bevel of a highlight
+	 * inside dated the header next to the canvas it sits on. The name
+	 * spans the whole label now, the fill stays the color of the channel,
+	 * and the hover keeps its lightening - a step, not a flood.
+	 */
+	const qreal radius = r.height() / 5.0;
 
 	if (selected()) {
 		p.setPen(highlight_pen());
 		p.setBrush(Qt::transparent);
-		p.drawPolygon(points, countof(points));
+		p.drawRoundedRect(r, radius, radius);
 	}
 
-	p.setPen(Qt::transparent);
-	p.setBrush(hover ? base_->color().lighter() : base_->color());
-	p.drawPolygon(points, countof(points));
+	p.setPen(Qt::NoPen);
+	p.setBrush(hover ? base_->color().lighter(115) : base_->color());
+	p.drawRoundedRect(r, radius, radius);
 
-	p.setPen(base_->color().lighter());
-	p.setBrush(Qt::transparent);
-	p.drawPolygon(highlight_points, countof(highlight_points));
-
-	p.setPen(base_->color().darker());
-	p.setBrush(Qt::transparent);
-	p.drawPolygon(points, countof(points));
+	p.setPen(QPen(base_->color().darker(115), 1));
+	p.setBrush(Qt::NoBrush);
+	p.drawRoundedRect(r.adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
 
 	// Paint the text
 	p.setPen(select_text_color(base_->color()));
 	p.setFont(QApplication::font());
-	p.drawText(QRectF(r.x(), r.y(),
-		r.width() - label_arrow_length, r.height()),
-		Qt::AlignCenter | Qt::AlignVCenter, base_->name());
+	p.drawText(r, Qt::AlignCenter | Qt::AlignVCenter, base_->name());
 }
 
 void Trace::paint_error(QPainter &p, const ViewItemPaintParams &pp)
@@ -369,8 +343,26 @@ void Trace::paint_back(QPainter &p, ViewItemPaintParams &pp)
 	else
 	{
 		if (base_->type() == base_->LogicChannel)
-			return;
-		p.setBrush(pp.next_bg_color_state() ? BrightGrayBGColor : DarkGrayBGColor);
+		{
+			/*
+			 * A row the pointer is over takes a wash of its own - light
+			 * ink on the dark canvas, dark ink on the light one. The rows
+			 * are wide, and the wash says which row the hover affects
+			 * without moving anything in it.
+			 */
+			const QPoint hp = view->hover_point();
+			const int row_top = get_visual_y() + extents.first;
+			const int row_btm = get_visual_y() + extents.second;
+			if ((hp.y() < row_top) || (hp.y() >= row_btm))
+				return;
+
+			GlobalSettings settings;
+			p.setBrush(settings.current_theme_is_dark()
+				? QColor(255, 255, 255, 12)
+				: QColor(0, 0, 0, 12));
+		}
+		else
+			p.setBrush(pp.next_bg_color_state() ? BrightGrayBGColor : DarkGrayBGColor);
 	}
 	p.setPen(QPen(Qt::NoPen));
 
