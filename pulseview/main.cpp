@@ -229,6 +229,7 @@ int main(int argc, char *argv[])
 	bool restore_sessions = true;
 	bool do_scan = false;
 	bool show_version = false;
+	QString screenshot_path;
 	bool debug_console = false;
 	int loglevel = -1;
 
@@ -377,6 +378,7 @@ int main(int argc, char *argv[])
 			{"input-file", required_argument, nullptr, 'i'},
 			{"settings", required_argument, nullptr, 's'},
 			{"input-format", required_argument, nullptr, 'I'},
+			{"screenshot", required_argument, nullptr, 'S'},
 			{"clean", no_argument, nullptr, 'c'},
 			{"debug", no_argument, nullptr, 'g'},
 			{"log-to-stdout", no_argument, nullptr, 's'},
@@ -384,7 +386,7 @@ int main(int argc, char *argv[])
 		};
 
 		const int c = getopt_long(argc, argv,
-			"h?VDcl:d:i:s:I:g", long_options, nullptr);
+			"h?VDcl:d:i:s:I:gS:", long_options, nullptr);
 		if (c == -1)
 			break;
 
@@ -437,6 +439,10 @@ int main(int argc, char *argv[])
 
 		case 'I':
 			open_file_format = optarg;
+			break;
+
+		case 'S':
+			screenshot_path = QString::fromUtf8(optarg);
 			break;
 
 		case 'c':
@@ -577,6 +583,18 @@ int main(int argc, char *argv[])
 				qWarning() << "Could not prepare signal handler.";
 #endif
 			// Run the application
+			if (!screenshot_path.isEmpty()) {
+				/* Developer aid: let the window settle, then grab it to a
+				 * file and leave - what a build looks like, without a
+				 * human in front of it. */
+				QTimer::singleShot(2500, &w, [&w, screenshot_path]() {
+					const QPixmap grab = w.grab();
+					grab.save(screenshot_path);
+					qDebug() << "Screenshot saved to" << screenshot_path
+						<< "(" << grab.width() << "x" << grab.height() << ")";
+					QApplication::quit();
+				});
+			}
 			ret = a.exec();
 		}
 #ifndef ENABLE_STACKTRACE
