@@ -40,20 +40,21 @@ sudo ./install_udev_rules.sh      # open the device without root (once)
 |---|---|---|
 | Windows 10/11 + MSYS2 MINGW64 | supported | `./setup_env.sh` |
 | Linux (Debian / Ubuntu) | supported | `./setup_env_linux.sh` (apt) |
-| macOS | **not ported** | none (`setup_env_macos.sh` is kept but no longer maintained) |
+| macOS (Homebrew, Apple Silicon tested) | supported | `./setup_env_macos.sh`, then `./build.sh --qt5` |
 
 ## Device access and driver back ends
 
 | | Windows | Linux | macOS |
 |---|---|---|---|
 | `wch-ch32h417` (CH375DLL) | yes, the default binding | not built | not built |
-| `wch-ch32h417-libusb` (libusb) | yes, after rebinding to WinUSB with Zadig | yes | unverified |
-| `fx2lafw` (libusb, FX2 based analyzers) | yes, after rebinding to WinUSB with Zadig | yes | unverified |
-| Firmware upgrade (IAP) | either back end | libusb only | unverified |
+| `wch-ch32h417-libusb` (libusb) | yes, after rebinding to WinUSB with Zadig | yes | yes, tested with a CH32H417 |
+| `fx2lafw` (libusb, FX2 based analyzers) | yes, after rebinding to WinUSB with Zadig | yes | builds, untested |
+| Firmware upgrade (IAP) | either back end | libusb only | untested |
 
 On Windows the device is bound to `CH375WDM.sys` by default, which is what the `wch-ch32h417`
 driver talks to; the libusb back end there needs a WinUSB rebind with Zadig first. Off Windows
-only the libusb back end exists. Of the two, Linux has been built and run; macOS has not been ported.
+only the libusb back end exists; Linux and macOS both run through it, macOS on Apple Silicon
+with real captures against a CH32H417. No driver install or udev rules are needed on macOS.
 
 ## Layout
 
@@ -62,7 +63,7 @@ only the libusb back end exists. Of the two, Linux has been built and run; macOS
 ├── doc/                         # usage and build documentation (EN / zh_CN) with screenshots
 ├── setup_env.sh                 # environment setup, Windows
 ├── setup_env_linux.sh           # environment setup, Debian/Ubuntu
-├── setup_env_macos.sh           # environment setup, macOS (kept, not ported)
+├── setup_env_macos.sh           # environment setup, macOS (Homebrew)
 ├── build.sh                     # build + portable package
 ├── package_installer.sh         # installer (NSIS / deb + tar.gz + AppImage)
 ├── install_udev_rules.sh        # installs the udev rules on Linux

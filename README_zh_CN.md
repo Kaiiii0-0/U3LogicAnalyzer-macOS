@@ -38,19 +38,20 @@ English: [Usage](doc/usage.md) · [Building](doc/building.md)
 |---|---|---|
 | Windows 10/11 + MSYS2 MINGW64 | 支持 | `./setup_env.sh` |
 | Linux（Debian / Ubuntu） | 支持 | `./setup_env_linux.sh`（apt） |
-| macOS | **未适配** | 不提供（`setup_env_macos.sh` 保留但不再维护） |
+| macOS（Homebrew，Apple Silicon 已实测） | 支持 | `./setup_env_macos.sh`，然后 `./build.sh --qt5` |
 
 ## 设备访问与驱动后端
 
 | | Windows | Linux | macOS |
 |---|---|---|---|
 | `wch-ch32h417`（CH375DLL） | 默认绑定 | 不参与构建 | 不参与构建 |
-| `wch-ch32h417-libusb`（libusb） | 需先用 Zadig 改绑 WinUSB | 支持 | 未验证 |
-| `fx2lafw`（libusb，FX2 方案设备） | 需先用 Zadig 改绑 WinUSB | 支持 | 未验证 |
-| 固件升级（IAP） | 两个后端都行 | 仅 libusb 后端 | 未验证 |
+| `wch-ch32h417-libusb`（libusb） | 需先用 Zadig 改绑 WinUSB | 支持 | 支持，已用 CH32H417 实测 |
+| `fx2lafw`（libusb，FX2 方案设备） | 需先用 Zadig 改绑 WinUSB | 支持 | 可构建，未实测 |
+| 固件升级（IAP） | 两个后端都行 | 仅 libusb 后端 | 未实测 |
 
 Windows 上设备默认绑在 `CH375WDM.sys`（走 `wch-ch32h417` 驱动），想用 libusb 后端需先用
-Zadig 改绑 WinUSB。非 Windows 平台只有 libusb 后端，其中 Linux 已实机验证，macOS 未适配。
+Zadig 改绑 WinUSB。非 Windows 平台只有 libusb 后端，Linux 与 macOS 都走它；macOS 已在
+Apple Silicon 上完成 CH32H417 实机采集，且无需安装任何驱动或 udev 规则。
 
 ## 目录结构
 
@@ -59,7 +60,7 @@ Zadig 改绑 WinUSB。非 Windows 平台只有 libusb 后端，其中 Linux 已�
 ├── doc/                         # 使用说明与构建说明（中英双语，含截图）
 ├── setup_env.sh                 # Windows 环境部署
 ├── setup_env_linux.sh           # Linux（Debian/Ubuntu）环境部署
-├── setup_env_macos.sh           # macOS 环境部署（保留，未适配、不再维护）
+├── setup_env_macos.sh           # macOS 环境部署（Homebrew）
 ├── build.sh                     # 构建 + 便携包
 ├── package_installer.sh         # 安装包（NSIS / deb+tar.gz+AppImage）
 ├── install_udev_rules.sh        # Linux udev 规则安装
