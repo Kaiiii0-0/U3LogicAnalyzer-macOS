@@ -57,7 +57,7 @@ StandardBar::StandardBar(Session &session, QWidget *parent,
 	segment_selector_(new QSpinBox(this))
 {
 	setObjectName(QString::fromUtf8("StandardBar"));
-	setIconSize(QSize(32, 32));
+	setIconSize(QSize(26, 26));
 
 	/*
 	 * A button that stands for a mode - whether the cursors are shown,

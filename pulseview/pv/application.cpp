@@ -67,7 +67,10 @@ static gint sort_pds(gconstpointer a, gconstpointer b)
 Application::Application(int &argc, char* argv[]) :
 	QApplication(argc, argv)
 {
-	setApplicationVersion(QString("%1 base on sigrok pulseview").arg(PV_VERSION_STRING));
+	/* Just the version: the suffix this used to carry travelled into the
+	 * window title, and the libraries this build is based on name
+	 * themselves in the version page beside it. */
+	setApplicationVersion(PV_VERSION_STRING);
 	setApplicationName("U3LogicAnalyzer");
 	setOrganizationName("WeActStudio");
 	setOrganizationDomain("WeActStudio.com");

@@ -424,7 +424,7 @@ namespace pv
 #endif
 		// add_math_signal_button_(new QToolButton())
 		{
-			setIconSize(QSize(32, 32));
+			setIconSize(QSize(26, 26));
 			channel_number_ = 16;
 			channels_ = nullptr;
 
@@ -439,8 +439,8 @@ namespace pv
 
 			setStyleSheet(
 				"QToolBar {"
-				"    spacing: 2px;"
-				"    padding: 4px;"
+				"    spacing: 4px;"
+				"    padding: 6px;"
 				"}"
 				"QToolBar QToolButton {"
 				"    margin: 0px;"
