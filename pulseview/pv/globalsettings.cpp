@@ -560,16 +560,16 @@ void GlobalSettings::apply_theme()
 	 * The native macOS style paints with the appearance of the system and
 	 * takes its colors from it: a palette built here would be ignored or
 	 * fight the style. Leave the palette to the style, and take the scheme
-	 * the rest of the application paints with from the palette the style
-	 * picked for the system appearance -- whatever the theme setting says,
-	 * for a canvas painted dark inside a light system window is what
-	 * honoring the setting there would amount to. The style was set above,
-	 * which put its standard palette in place, and that palette follows
-	 * the appearance the system is in.
+	 * the rest of the application paints with from the system itself --
+	 * whatever the theme setting says, for a canvas painted dark inside a
+	 * light system window is what honoring the setting there would amount
+	 * to. The application palette is not the witness here: the platform
+	 * theme updates it on a schedule of its own, so a change that has
+	 * just been made can sit undelivered while the events are being read.
 	 */
 #if defined(Q_OS_MAC)
 	if (value(Key_General_Style).toString().toLower() == Style_NativeMac)
-		dark = palette_is_dark(qApp->palette());
+		dark = system_prefers_dark(default_palette_);
 	else
 #endif
 		qApp->setPalette(dark ? make_dark_palette() : make_light_palette());

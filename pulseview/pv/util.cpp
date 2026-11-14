@@ -59,6 +59,7 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QStyle>
+#include <QProcess>
 #include <QTimer>
 #include <QWidget>
 #include <QPixmap>
@@ -876,6 +877,33 @@ int portal_color_scheme()
 
 DesktopColorScheme desktop_color_scheme()
 {
+#ifdef Q_OS_MAC
+	/*
+	 * macOS answers in the defaults of the global domain: the key reads
+	 * "Dark" while the appearance is dark, and is absent while it is
+	 * light. Asking again is what lets a running theme follow a switch:
+	 * Qt 5 has no signal of its own for the appearance here, and the
+	 * palette of the application is updated by the platform theme on a
+	 * schedule of its own, which is not the schedule the events arrive
+	 * on - reading the palette on the way past was what left the theme
+	 * believing in the one the program was started under.
+	 */
+	QProcess defaults;
+	defaults.start(QStringLiteral("defaults"),
+		QStringList() << QStringLiteral("read")
+			<< QStringLiteral("-g")
+			<< QStringLiteral("AppleInterfaceStyle"));
+	defaults.waitForFinished(500);
+	const QString answer = QString::fromUtf8(
+		defaults.readAllStandardOutput()).trimmed();
+	if (answer.compare(QLatin1String("Dark"), Qt::CaseInsensitive) == 0)
+		return DesktopColorScheme::Dark;
+	/* A key that is not there is the light appearance; the "Auto"
+	 * appearance reports itself the same way until it goes dark, and a
+	 * theme that follows the system follows it only from then on. */
+	return DesktopColorScheme::Light;
+#endif
+
 	switch (portal_color_scheme()) {
 	case 1:
 		return DesktopColorScheme::Dark;
