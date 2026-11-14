@@ -352,7 +352,13 @@ int main(int argc, char *argv[])
 #endif
 
 	QFont currentFont = a.font();
+#ifdef _WIN32
+	/* YaHei is a Windows font; asking for it elsewhere only costs a font
+	 * family alias pass and lands on a fallback anyway. macOS and Linux
+	 * pick their system font, which renders the Chinese UI text through
+	 * the platform's own fallback (PingFang SC, Noto Sans CJK). */
 	currentFont.setFamily("Microsoft YaHei");
+#endif
 	a.setFont(currentFont);
 
 #ifdef ANDROID
