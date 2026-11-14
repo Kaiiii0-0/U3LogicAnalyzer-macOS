@@ -6,6 +6,9 @@ else
     # Linux / macOS: use the system Python (no PYTHONHOME needed) and point
     # the loader at the freshly built sigrok libraries.
     export LD_LIBRARY_PATH="${SCRIPT_DIR}/install/lib:${LD_LIBRARY_PATH}"
+    # macOS's dyld ignores LD_LIBRARY_PATH; the binary finds the sigrok
+    # dylibs through @rpath, so add the fallback path for it.
+    export DYLD_FALLBACK_LIBRARY_PATH="${SCRIPT_DIR}/install/lib:${DYLD_FALLBACK_LIBRARY_PATH}"
     BIN=./U3LogicAnalyzer
 fi
 export SIGROKDECODE_DIR=${SCRIPT_DIR}/install/share/libsigrokdecode/decoders
