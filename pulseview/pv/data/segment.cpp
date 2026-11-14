@@ -565,7 +565,15 @@ uint64_t Segment::get_iterator_valid_length(SegmentDataIterator* it)
 void Segment::set_channel_numner(uint16_t channel_num)
 {
 	channel_num_ = channel_num;
-	unit_size_temp = (8.0 / channel_num_);
+	/* 8.0/n stored into an unsigned int truncated to zero for every n > 8
+	 * (e.g. the 16-channel demo/device capture), and a zero here divides
+	 * the muxer's zoom buffer size to infinity, saturating the cast to
+	 * UINT64_MAX and ending in std::bad_alloc. Counts above 8 pack one
+	 * sample per byte, exactly like 8 does; 0 is defensive. */
+	if ((channel_num_ == 0) || (channel_num_ > 8))
+		unit_size_temp = 1;
+	else
+		unit_size_temp = 8 / channel_num_;
 
 	/*
 	 * The zoom buffer is sized after the number of channels, and the code
