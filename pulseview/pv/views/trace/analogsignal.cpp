@@ -78,12 +78,44 @@ namespace pv
 		namespace trace
 		{
 
-			const QPen AnalogSignal::AxisPen(QColor(0, 0, 0, 30 * 256 / 100), 2);
-			const QColor AnalogSignal::GridMajorColor = QColor(0, 0, 0, 40 * 256 / 100);
-			const QColor AnalogSignal::GridMinorColor = QColor(0, 0, 0, 20 * 256 / 100);
+			/*
+			 * The light-theme values are the ones this always drew; the
+			 * dark theme turns the same overlays white, for the black
+			 * ones sink into the canvas without a trace.
+			 */
+			QPen AnalogSignal::axis_pen()
+			{
+				GlobalSettings settings;
+				return settings.current_theme_is_dark()
+					? QPen(QColor(255, 255, 255, 30 * 256 / 100), 2)
+					: QPen(QColor(0, 0, 0, 30 * 256 / 100), 2);
+			}
+
+			QColor AnalogSignal::grid_major_color()
+			{
+				GlobalSettings settings;
+				return settings.current_theme_is_dark()
+					? QColor(255, 255, 255, 40 * 256 / 100)
+					: QColor(0, 0, 0, 40 * 256 / 100);
+			}
+
+			QColor AnalogSignal::grid_minor_color()
+			{
+				GlobalSettings settings;
+				return settings.current_theme_is_dark()
+					? QColor(255, 255, 255, 20 * 256 / 100)
+					: QColor(0, 0, 0, 20 * 256 / 100);
+			}
+
+			QColor AnalogSignal::sampling_point_color_ne()
+			{
+				GlobalSettings settings;
+				return settings.current_theme_is_dark()
+					? QColor(255, 255, 255, 80 * 256 / 100)
+					: QColor(0, 0, 0, 80 * 256 / 100);
+			}
 
 			const QColor AnalogSignal::SamplingPointColorLo = QColor(200, 0, 0, 80 * 256 / 100);
-			const QColor AnalogSignal::SamplingPointColorNe = QColor(0, 0, 0, 80 * 256 / 100);
 			const QColor AnalogSignal::SamplingPointColorHi = QColor(0, 200, 0, 80 * 256 / 100);
 
 			const QColor AnalogSignal::ThresholdColor = QColor(0, 0, 0, 30 * 256 / 100);
@@ -110,7 +142,7 @@ namespace pv
 																								  display_type_(DisplayAnalog),
 																								  autoranging_(true)
 			{
-				axis_pen_ = AxisPen;
+				axis_pen_ = axis_pen();
 
 				pv::data::Analog *analog_data =
 					dynamic_cast<pv::data::Analog *>(base_->analog_data().get());
@@ -368,7 +400,7 @@ namespace pv
 
 				if (pos_vdivs_ > 0)
 				{
-					p.setPen(QPen(GridMajorColor, 1, Qt::DashLine));
+					p.setPen(QPen(grid_major_color(), 1, Qt::DashLine));
 					for (int i = 1; i <= pos_vdivs_; i++)
 					{
 						const float dy = i * div_height_;
@@ -378,7 +410,7 @@ namespace pv
 
 				if ((pos_vdivs_ > 0) && show_analog_minor_grid_)
 				{
-					p.setPen(QPen(GridMinorColor, 1, Qt::DashLine));
+					p.setPen(QPen(grid_minor_color(), 1, Qt::DashLine));
 					for (int i = 0; i < pos_vdivs_; i++)
 					{
 						const float dy = i * div_height_;
@@ -393,7 +425,7 @@ namespace pv
 
 				if (neg_vdivs_ > 0)
 				{
-					p.setPen(QPen(GridMajorColor, 1, Qt::DashLine));
+					p.setPen(QPen(grid_major_color(), 1, Qt::DashLine));
 					for (int i = 1; i <= neg_vdivs_; i++)
 					{
 						const float dy = i * div_height_;
@@ -403,7 +435,7 @@ namespace pv
 
 				if ((pos_vdivs_ > 0) && show_analog_minor_grid_)
 				{
-					p.setPen(QPen(GridMinorColor, 1, Qt::DashLine));
+					p.setPen(QPen(grid_minor_color(), 1, Qt::DashLine));
 					for (int i = 0; i < neg_vdivs_; i++)
 					{
 						const float dy = i * div_height_;
@@ -509,7 +541,7 @@ namespace pv
 				{
 					if (paint_thr_dots)
 					{
-						p.setPen(SamplingPointColorNe);
+						p.setPen(sampling_point_color_ne());
 						p.drawRects(sampling_points[0].data(), sampling_points[0].size());
 						p.setPen(SamplingPointColorLo);
 						p.drawRects(sampling_points[1].data(), sampling_points[1].size());
@@ -1078,6 +1110,11 @@ namespace pv
 			void AnalogSignal::on_setting_changed(const QString &key, const QVariant &value)
 			{
 				Signal::on_setting_changed(key, value);
+
+				/* The axis pen carries the ink of the theme it was built
+				 * under; a theme switch re-derives it, like the icons. */
+				if (key == GlobalSettings::Key_General_Theme)
+					axis_pen_ = axis_pen();
 
 				if (key == GlobalSettings::Key_View_ShowSamplingPoints)
 					show_sampling_points_ = value.toBool();

@@ -193,7 +193,7 @@ void CursorPair::paint_label(QPainter &p, const QRect &rect, bool hover)
 	if (!enabled())
 		return;
 
-	const QColor text_color = ViewItem::select_text_color(Cursor::FillColor);
+	const QColor text_color = ViewItem::select_text_color(Cursor::fill_color());
 	p.setPen(text_color);
 
 	QRectF delta_rect(label_rect(rect));
@@ -211,12 +211,12 @@ void CursorPair::paint_label(QPainter &p, const QRect &rect, bool hover)
 		p.drawRoundedRect(delta_rect, radius, radius);
 	}
 
-	p.setBrush(hover ? Cursor::FillColor.lighter() : Cursor::FillColor);
-	p.setPen(Cursor::FillColor.darker());
+	p.setBrush(hover ? Cursor::fill_color().lighter() : Cursor::fill_color());
+	p.setPen(Cursor::fill_color().darker());
 	p.drawRoundedRect(delta_rect, radius, radius);
 
 	delta_rect.adjust(1, 1, -1, -1);
-	p.setPen(Cursor::FillColor.lighter());
+	p.setPen(Cursor::fill_color().lighter());
 	const int highlight_radius = delta_rect.height() / 2 - 2;
 	p.drawRoundedRect(delta_rect, highlight_radius, highlight_radius);
 	label_area_ = delta_rect;

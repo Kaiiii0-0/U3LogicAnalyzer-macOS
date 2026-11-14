@@ -748,6 +748,8 @@ if [ $PACKAGE -eq 1 ]; then
     <string>U3LogicAnalyzer</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>U3LogicAnalyzer</string>
     <key>CFBundleVersion</key>
     <string>0.2</string>
     <key>CFBundleShortVersionString</key>
@@ -763,6 +765,15 @@ PLIST
         cp "$BUILD_DIR/logicanalyzer_build/U3LogicAnalyzer" "$MAIN_BIN"
         chmod +x "$MAIN_BIN"
         echo "  U3LogicAnalyzer.app/Contents/MacOS/U3LogicAnalyzer"
+
+        # The icon the Dock shows: an icns of the app's own, not the
+        # PulseView logo that used to stand in for it.
+        ICON_ICNS="$SCRIPT_DIR/pulseview/icons/U3LogicAnalyzer.icns"
+        if [ -f "$ICON_ICNS" ]; then
+            mkdir -p "$APP/Contents/Resources"
+            cp "$ICON_ICNS" "$APP/Contents/Resources/U3LogicAnalyzer.icns"
+            echo "  U3LogicAnalyzer.app/Contents/Resources/U3LogicAnalyzer.icns"
+        fi
 
         # macdeployqt needs libsharpyuv (Qt imageformats) on the search path
         for sharpyuv in /opt/homebrew/lib/libsharpyuv.0.dylib \

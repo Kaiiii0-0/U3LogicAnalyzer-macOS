@@ -21,6 +21,7 @@
 
 #include "cursor.hpp"
 
+#include "pv/globalsettings.hpp"
 #include "pv/util.hpp"
 #include "ruler.hpp"
 #include "view.hpp"
@@ -44,10 +45,16 @@ namespace pv {
 namespace views {
 namespace trace {
 
-const QColor Cursor::FillColor(52, 101, 164);
+QColor Cursor::fill_color()
+{
+	GlobalSettings settings;
+	return settings.current_theme_is_dark()
+		? QColor(96, 160, 235)
+		: QColor(52, 101, 164);
+}
 
 Cursor::Cursor(View &view, double time) :
-	TimeMarker(view, FillColor, time)
+	TimeMarker(view, fill_color(), time)
 {
 }
 

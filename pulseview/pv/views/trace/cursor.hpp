@@ -41,7 +41,9 @@ class Cursor : public TimeMarker
 	Q_OBJECT
 
 public:
-	static const QColor FillColor;
+	/* The ink of the cursor: the blue of the light theme, lifted for
+	 * the dark canvas. */
+	static QColor fill_color();
 
 public:
 	/**

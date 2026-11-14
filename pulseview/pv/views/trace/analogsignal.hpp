@@ -50,10 +50,16 @@ class AnalogSignal : public LogicSignal
 	Q_OBJECT
 
 private:
-	static const QPen AxisPen;
-	static const QColor GridMajorColor, GridMinorColor;
+	/*
+	 * The grid, the axis and the neutral markers take the ink of the
+	 * theme: their black overlays sit on the canvas, and on the dark one
+	 * they read as nothing. The colored markers keep their hues.
+	 */
+	static QPen axis_pen();
+	static QColor grid_major_color();
+	static QColor grid_minor_color();
+	static QColor sampling_point_color_ne();
 	static const QColor SamplingPointColorLo;
-	static const QColor SamplingPointColorNe;
 	static const QColor SamplingPointColorHi;
 	static const QColor ThresholdColor;
 	static const QColor ThresholdColorLo;

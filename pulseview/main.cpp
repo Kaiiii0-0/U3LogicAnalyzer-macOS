@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
 	 * one (dialogs, popups) falls back to the generic icon, and on Linux
 	 * the task bar shows the default icon too.
 	 */
-	a.setWindowIcon(QIcon(":/icons/pulseview.png"));
+	a.setWindowIcon(QIcon(":/icons/app-icon.png"));
 
 	/*
 	 * The id this window is known by on Wayland, and the name of the
