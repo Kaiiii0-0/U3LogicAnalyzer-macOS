@@ -984,12 +984,16 @@ void watch_color_scheme(const std::function<void()> &callback)
 #elif defined(Q_OS_MAC)
 
 /*
- * macOS announces an appearance change as QEvent::ThemeChange: the cocoa
- * platform theme follows the appearance of the system and hands the event
- * to every widget when it changes. Qt 5 has no signal of its own for it,
- * so an application wide filter is what lets a theme which follows the
- * system -- and the native style, which paints with the appearance of the
- * system -- react to a change made while the program is running.
+ * macOS announces an appearance change as QEvent::ThemeChange, and the
+ * cocoa platform theme also refreshes the application palette around the
+ * same time, which travels as QEvent::ApplicationPaletteChange. Which of
+ * the two arrives, and in what order, is the platform's business - on the
+ * Qt 5 builds this runs against the ThemeChange has been observed to go
+ * missing, so the palette event is watched as well. Qt 5 has no signal of
+ * its own for either, so an application wide filter is what lets a theme
+ * which follows the system -- and the native style, which paints with the
+ * appearance of the system -- react to a change made while the program is
+ * running.
  */
 class ThemeChangeEventFilter : public QObject
 {
@@ -1003,9 +1007,13 @@ public:
 	{
 		(void)watched;
 
-		if (event->type() == QEvent::ThemeChange) {
+		const QEvent::Type type = event->type();
+		if (type == QEvent::ThemeChange ||
+			type == QEvent::ApplicationPaletteChange) {
 			/* The palette the change brings may not be in place while
-			 * the event is on its way; run once it is. */
+			 * the event is on its way; run once it is. The callback
+			 * itself decides whether the appearance actually moved -
+			 * these events also arrive for restylings of our own. */
 			QTimer::singleShot(0, callback_);
 		}
 

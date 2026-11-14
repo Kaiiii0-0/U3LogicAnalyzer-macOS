@@ -86,8 +86,21 @@ Application::Application(int &argc, char* argv[]) :
 	pv::util::watch_color_scheme([]() {
 		pv::GlobalSettings settings;
 		if (settings.value(pv::GlobalSettings::Key_General_Theme).toInt() ==
-			pv::Theme_System)
-			settings.apply_theme();
+			pv::Theme_System) {
+			/*
+			 * The events the watcher hands over also arrive for
+			 * restylings of the application's own, and a pass that
+			 * answers one of those would raise the next one. Only a
+			 * move of the system appearance itself gets a pass, and
+			 * the answer is read from the system fresh every time,
+			 * which is what leaves the palette out of the question.
+			 */
+			const bool system_dark =
+				(pv::util::desktop_color_scheme() ==
+					pv::util::DesktopColorScheme::Dark);
+			if (system_dark != pv::GlobalSettings::current_theme_is_dark())
+				settings.apply_theme();
+		}
 	});
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0) && !defined(_WIN32)
