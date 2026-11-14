@@ -1,6 +1,46 @@
 <RCC>
     <qresource prefix="/">
 	<file>icons/add-decoder.svg</file>
+	<file>icons/channels-onlight.svg</file>
+	<file>icons/channels-ondark.svg</file>
+	<file>icons/cursors-onlight.svg</file>
+	<file>icons/cursors-ondark.svg</file>
+	<file>icons/decode-result-onlight.svg</file>
+	<file>icons/decode-result-ondark.svg</file>
+	<file>icons/decoder-onlight.svg</file>
+	<file>icons/decoder-ondark.svg</file>
+	<file>icons/demo-screen-onlight.svg</file>
+	<file>icons/demo-screen-ondark.svg</file>
+	<file>icons/file-doc-onlight.svg</file>
+	<file>icons/file-doc-ondark.svg</file>
+	<file>icons/folder-open-onlight.svg</file>
+	<file>icons/folder-open-ondark.svg</file>
+	<file>icons/gear-onlight.svg</file>
+	<file>icons/gear-ondark.svg</file>
+	<file>icons/help-book-onlight.svg</file>
+	<file>icons/help-book-ondark.svg</file>
+	<file>icons/repeat-run-onlight.svg</file>
+	<file>icons/repeat-run-ondark.svg</file>
+	<file>icons/save-tray-onlight.svg</file>
+	<file>icons/save-tray-ondark.svg</file>
+	<file>icons/single-run-onlight.svg</file>
+	<file>icons/single-run-ondark.svg</file>
+	<file>icons/sliders-onlight.svg</file>
+	<file>icons/sliders-ondark.svg</file>
+	<file>icons/start-play-onlight.svg</file>
+	<file>icons/start-play-ondark.svg</file>
+	<file>icons/stop-square-onlight.svg</file>
+	<file>icons/stop-square-ondark.svg</file>
+	<file>icons/usb2-onlight.svg</file>
+	<file>icons/usb2-ondark.svg</file>
+	<file>icons/usb3-onlight.svg</file>
+	<file>icons/usb3-ondark.svg</file>
+	<file>icons/zoom-fit-onlight.svg</file>
+	<file>icons/zoom-fit-ondark.svg</file>
+	<file>icons/zoom-in-onlight.svg</file>
+	<file>icons/zoom-in-ondark.svg</file>
+	<file>icons/zoom-out-onlight.svg</file>
+	<file>icons/zoom-out-ondark.svg</file>
 	<file>icons/add-decoder.png</file>
 	<file>icons/add-math-signal.svg</file>
 	<file>icons/application-exit.png</file>

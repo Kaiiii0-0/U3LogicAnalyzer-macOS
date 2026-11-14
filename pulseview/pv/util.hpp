@@ -34,6 +34,7 @@
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #endif
 
+#include <QIcon>
 #include <QMetaType>
 #include <QString>
 #include <QFontMetrics>
@@ -355,6 +356,17 @@ DesktopColorScheme desktop_color_scheme();
 void watch_color_scheme(const std::function<void()> &callback);
 
 } // namespace util
+
+/**
+ * The toolbar icon of @c base name, in the ink the current theme asks for.
+ *
+ * Every icon of the set carries two inks: "-onlight" for the light theme
+ * and "-ondark" for the dark one. A run that follows a theme switch picks
+ * its icons again, which is what keeps them from wearing ink that the
+ * canvas around them dropped.
+ */
+QIcon theme_icon(const QString &base);
+
 } // namespace pv
 
 Q_DECLARE_METATYPE(pv::util::Timestamp)

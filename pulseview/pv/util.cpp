@@ -61,6 +61,8 @@
 #include <QStyle>
 #include <QProcess>
 #include <QTimer>
+
+#include "globalsettings.hpp"
 #include <QWidget>
 #include <QPixmap>
 #include <QPushButton>
@@ -1068,4 +1070,13 @@ void watch_color_scheme(const std::function<void()> &callback)
 #endif
 
 } // namespace util
+
+QIcon theme_icon(const QString &base)
+{
+	GlobalSettings settings;
+	return QIcon(QStringLiteral(":/icons/%1-%2.svg").arg(base,
+		settings.current_theme_is_dark() ? QStringLiteral("ondark")
+			: QStringLiteral("onlight")));
+}
+
 } // namespace pv

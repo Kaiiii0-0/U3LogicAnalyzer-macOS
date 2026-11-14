@@ -430,7 +430,7 @@ namespace pv
 
 			// Initialize the device status icon
 			device_status_icon_->setObjectName(QString::fromUtf8("device_status_icon"));
-			device_status_icon_->setIcon(QIcon(":/icons/Demo.png"));
+			device_status_icon_->setIcon(theme_icon("demo-screen"));
 			device_status_icon_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 			device_status_icon_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 			setObjectName(QString::fromUtf8("MainBar"));
@@ -519,11 +519,11 @@ namespace pv
 			);
 
 			// Actions
-			action_new_view_->setIcon(QIcon(":/icons/decode_result.png"));
+			action_new_view_->setIcon(theme_icon("decode-result"));
 			connect(action_new_view_, SIGNAL(triggered(bool)),
 					this, SLOT(on_actionNewView_triggered()));
 
-			action_open_->setIcon(QIcon(":/icons/document-open.png"));
+			action_open_->setIcon(theme_icon("folder-open"));
 			action_open_->setShortcut(pv::util::key_sequence(Qt::CTRL, Qt::Key_O));
 			connect(action_open_, SIGNAL(triggered(bool)),
 					this, SLOT(on_actionOpen_triggered()));
@@ -531,16 +531,16 @@ namespace pv
 			connect(action_restore_setup_, SIGNAL(triggered(bool)),
 					this, SLOT(on_actionRestoreSetup_triggered()));
 
-			action_save_->setIcon(QIcon(":/icons/document-save-as.png"));
+			action_save_->setIcon(theme_icon("save-tray"));
 			action_save_->setShortcut(pv::util::key_sequence(Qt::CTRL, Qt::Key_S));
 			connect(action_save_, SIGNAL(triggered(bool)),
 					this, SLOT(on_actionSave_triggered()));
 
-			action_save_as_->setIcon(QIcon(":/icons/document-save-as.png"));
+			action_save_as_->setIcon(theme_icon("save-tray"));
 			connect(action_save_as_, SIGNAL(triggered(bool)),
 					this, SLOT(on_actionSaveAs_triggered()));
 
-			action_save_selection_as_->setIcon(QIcon(":/icons/document-save-as.png"));
+			action_save_selection_as_->setIcon(theme_icon("save-tray"));
 			action_save_selection_as_->setShortcut(pv::util::key_sequence(Qt::CTRL, Qt::Key_R));
 			connect(action_save_selection_as_, SIGNAL(triggered(bool)),
 					this, SLOT(on_actionSaveSelectionAs_triggered()));
@@ -581,8 +581,8 @@ namespace pv
 			menu_model_view_ = new QMenu();
 			action_single_ = menu_model_view_->addAction(QString());
 			action_repeat_ = menu_model_view_->addAction(QString());
-			action_single_->setIcon(QIcon(":/icons/Single.png"));
-			action_repeat_->setIcon(QIcon(":/icons/Repeat.png"));
+			action_single_->setIcon(theme_icon("single-run"));
+			action_repeat_->setIcon(theme_icon("repeat-run"));
 
 			connect(action_single_, SIGNAL(triggered(bool)), this, SLOT(on_actionSingle_triggered()));
 			connect(action_repeat_, SIGNAL(triggered(bool)), this, SLOT(on_actionRepeat_triggered()));
@@ -611,7 +611,7 @@ namespace pv
 
 			// help button
 			help_button_->setMenu(menu_help_view_);
-			help_button_->setIcon(QIcon(":/icons/Help.png"));
+			help_button_->setIcon(theme_icon("help-book"));
 			help_button_->setPopupMode(QToolButton::MenuButtonPopup);
 			help_button_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 			// connect(help_button_, &QToolButton::clicked, help_button_, &QToolButton::showMenu);
@@ -622,13 +622,13 @@ namespace pv
 					this, SLOT(import_file(shared_ptr<sigrok::InputFormat>)));
 
 			// run stop button
-			run_stop_button_->setIcon(QIcon(":/icons/Start.png"));
+			run_stop_button_->setIcon(theme_icon("start-play"));
 			run_stop_button_->setShortcut(QKeySequence(Qt::Key_S));
 			run_stop_button_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 			connect(run_stop_button_, SIGNAL(clicked()), this, SIGNAL(run_stop_button_clicked()));
 			// model change button
 			model_change_button_->setMenu(menu_model_view_);
-			model_change_button_->setIcon(QIcon(":/icons/Single.png")); // default single model
+			model_change_button_->setIcon(theme_icon("single-run")); // default single model
 			// model_change_button_->setDefaultAction(action_single_);
 			model_change_button_->setPopupMode(QToolButton::MenuButtonPopup);
 			model_change_button_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -702,7 +702,7 @@ namespace pv
 
 			// Setup the decoder button
 #ifdef ENABLE_DECODE
-			add_decoder_button_->setIcon(QIcon(":/icons/add-decoder.png"));
+			add_decoder_button_->setIcon(theme_icon("decoder"));
 			add_decoder_button_->setPopupMode(QToolButton::InstantPopup);
 			/* Stays pressed while the decoder dock it opens is up, the way
 			 * the cursor button does for its own. */
@@ -745,7 +745,7 @@ namespace pv
 			// 	run_stop_button_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 			// 	run_stop_button_->setText(tr("Start"));
 			// connect(run_stop_button_, SIGNAL(clicked()), this, SIGNAL(run_stop_button_clicked()));
-			channels_button_ex_->setIcon(QIcon(":/icons/channels.png"));
+			channels_button_ex_->setIcon(theme_icon("sliders"));
 			channels_button_ex_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 			channels_button_ex_->setToolButtonStyle((Qt::ToolButtonStyle)Qt::ToolButtonTextUnderIcon);
 			connect(channels_button_ex_, SIGNAL(clicked()), this, SLOT(channels_button_ex_clicked()));
@@ -768,6 +768,10 @@ namespace pv
 			update_device_list();
 			is_rate_setting_default_ = false;
 			is_count_setting_default_ = false;
+			/* The bar wears the ink of the theme; a switch of the theme
+			 * reaches it through the settings, which it listens to from
+			 * here on. */
+			GlobalSettings::add_change_handler(this);
 			retranslate_ui();
 			update_device_status_icon();
 			update_upgrade_action();
@@ -844,6 +848,8 @@ namespace pv
 
 	MainBar::~MainBar()
 		{
+			GlobalSettings::remove_change_handler(this);
+
 			/*
 			 * Hot-plug belongs to the bar that started the watcher. Another
 			 * session's bar being destroyed must not take it down: clearing
@@ -1965,14 +1971,14 @@ namespace pv
 		{
 			const shared_ptr<devices::Device> device = device_selector_.selected_device();
 			if (!device) {
-				device_status_icon_->setIcon(QIcon(":/icons/Demo.png"));
+				device_status_icon_->setIcon(theme_icon("demo-screen"));
 				device_status_icon_->setText(tr("Demo"));
 				device_status_icon_->setToolTip(tr("Device Status: Demo"));
 				return;
 			}
 
 			if (session_.using_file_device()) {
-				device_status_icon_->setIcon(QIcon(":/icons/File.png"));
+				device_status_icon_->setIcon(theme_icon("file-doc"));
 				device_status_icon_->setText(tr("File"));
 				device_status_icon_->setToolTip(tr("Device Status: File"));
 				return;
@@ -1984,7 +1990,7 @@ namespace pv
 			if (hw_device) {
 				string driver_name = hw_device->hardware_device()->driver()->name();
 				if (driver_name == "demo") {
-					device_status_icon_->setIcon(QIcon(":/icons/Demo.png"));
+					device_status_icon_->setIcon(theme_icon("demo-screen"));
 					device_status_icon_->setText(tr("Demo"));
 					device_status_icon_->setToolTip(tr("Device Status: Demo"));
 					return;
@@ -2017,20 +2023,20 @@ namespace pv
 
 			if (have_usb_version) {
 				if (usb_version == 2) {
-					device_status_icon_->setIcon(QIcon(":/icons/USB20.png"));
+					device_status_icon_->setIcon(theme_icon("usb2"));
 					device_status_icon_->setText(tr("USB2.0"));
 					device_status_icon_->setToolTip(tr("Device Status: USB 2.0"));
 				} else {
-					device_status_icon_->setIcon(QIcon(":/icons/USB30.png"));
+					device_status_icon_->setIcon(theme_icon("usb3"));
 					device_status_icon_->setText(tr("USB3.0"));
 					device_status_icon_->setToolTip(tr("Device Status: USB 3.0"));
 				}
 			} else if (vendor == "USB3.0(CH569)") {
-				device_status_icon_->setIcon(QIcon(":/icons/USB30.png"));
+				device_status_icon_->setIcon(theme_icon("usb3"));
 				device_status_icon_->setText(tr("USB3.0"));
 				device_status_icon_->setToolTip(tr("Device Status: USB 3.0"));
 			} else {
-				device_status_icon_->setIcon(QIcon(":/icons/Demo.png"));
+				device_status_icon_->setIcon(theme_icon("demo-screen"));
 				device_status_icon_->setText(tr("Demo"));
 				device_status_icon_->setToolTip(tr("Device Status: Demo"));
 			}
@@ -3565,7 +3571,7 @@ namespace pv
 		void MainBar::on_actionSingle_triggered()
 		{
 			capture_mode_ = Session::Single;
-			model_change_button_->setIcon(QIcon(":/icons/Single.png"));
+			model_change_button_->setIcon(theme_icon("single-run"));
 			// model_change_button_->setText(tr("Single"));
 			model_change_button_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 		}
@@ -3573,7 +3579,7 @@ namespace pv
 		void MainBar::on_actionRepeat_triggered()
 		{
 			capture_mode_ = Session::Repeat;
-			model_change_button_->setIcon(QIcon(":/icons/Repeat.png"));
+			model_change_button_->setIcon(theme_icon("repeat-run"));
 			// model_change_button_->setText(tr("Repeat"));
 			model_change_button_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 		}
@@ -3583,14 +3589,50 @@ namespace pv
 			if (state == Session::Stopped)
 			{
 				// set start icon
-				run_stop_button_->setIcon(QIcon(":/icons/Start.png"));
+				run_stop_button_->setIcon(theme_icon("start-play"));
 				run_stop_button_->setText(tr("Start"));
 			}
 			else
 			{
-				run_stop_button_->setIcon(QIcon(":/icons/Stop.png"));
+				run_stop_button_->setIcon(theme_icon("stop-square"));
 				run_stop_button_->setText(tr("Stop"));
 			}
+		}
+
+		void MainBar::on_setting_changed(const QString &key, const QVariant &value)
+		{
+			if (key == GlobalSettings::Key_General_Theme)
+				refresh_icons();
+		}
+
+		void MainBar::refresh_icons()
+		{
+			/*
+			 * The icons carry the ink of the theme in use, so a switch of
+			 * the theme picks them again. The run and the mode buttons
+			 * show what the session is doing first and the theme second;
+			 * the device status icon knows which of its own it holds.
+			 */
+			action_new_view_->setIcon(theme_icon("decode-result"));
+			action_open_->setIcon(theme_icon("folder-open"));
+			action_save_->setIcon(theme_icon("save-tray"));
+			action_save_as_->setIcon(theme_icon("save-tray"));
+			action_save_selection_as_->setIcon(theme_icon("save-tray"));
+			action_single_->setIcon(theme_icon("single-run"));
+			action_repeat_->setIcon(theme_icon("repeat-run"));
+			help_button_->setIcon(theme_icon("help-book"));
+			add_decoder_button_->setIcon(theme_icon("decoder"));
+			channels_button_ex_->setIcon(theme_icon("sliders"));
+			model_change_button_->setIcon(theme_icon(
+				(capture_mode_ == Session::Repeat) ? "repeat-run" : "single-run"));
+			update_runstop_status((int)session_.get_capture_state());
+			update_device_status_icon();
+
+			/* The base class owns the zoom and cursor entries. */
+			action_view_zoom_in_->setIcon(theme_icon("zoom-in"));
+			action_view_zoom_out_->setIcon(theme_icon("zoom-out"));
+			action_view_zoom_fit_->setIcon(theme_icon("zoom-fit"));
+			action_view_show_cursors_->setIcon(theme_icon("cursors"));
 		}
 
 		void MainBar::on_actionNewView_triggered(QAction *action)

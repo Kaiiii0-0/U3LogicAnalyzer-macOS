@@ -28,6 +28,7 @@
 #include "view.hpp"
 
 #include <pv/mainwindow.hpp>
+#include <pv/util.hpp>
 std::thread t_proc;
 using pv::views::trace::View;
 #define M (1000*1000UL)
@@ -90,19 +91,19 @@ StandardBar::StandardBar(Session &session, QWidget *parent,
 		"}"));
 
 	// Actions
-	action_view_zoom_in_->setIcon(QIcon(":/icons/zoom-in.png"));
+	action_view_zoom_in_->setIcon(theme_icon("zoom-in"));
 	// simply using Qt::Key_Plus shows no + in the menu
 	action_view_zoom_in_->setShortcut(QKeySequence::ZoomIn);
 	connect(action_view_zoom_in_, SIGNAL(triggered(bool)),
 		this, SLOT(on_actionViewZoomIn_triggered()));
 
-	action_view_zoom_out_->setIcon(QIcon(":/icons/zoom-out.png"));
+	action_view_zoom_out_->setIcon(theme_icon("zoom-out"));
 	action_view_zoom_out_->setShortcut(QKeySequence::ZoomOut);
 	connect(action_view_zoom_out_, SIGNAL(triggered(bool)),
 		this, SLOT(on_actionViewZoomOut_triggered()));
 
 	action_view_zoom_fit_->setCheckable(true);
-	action_view_zoom_fit_->setIcon(QIcon(":/icons/zoom-fit-best.png"));
+	action_view_zoom_fit_->setIcon(theme_icon("zoom-fit"));
 	action_view_zoom_fit_->setShortcut(QKeySequence(Qt::Key_F));
 	connect(action_view_zoom_fit_, SIGNAL(triggered(bool)),
 		this, SLOT(on_actionViewZoomFit_triggered(bool)));
@@ -110,7 +111,7 @@ StandardBar::StandardBar(Session &session, QWidget *parent,
 	zoom_fit_button_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 
 	action_view_show_cursors_->setCheckable(true);
-	action_view_show_cursors_->setIcon(QIcon(":/icons/show-cursors.png"));
+	action_view_show_cursors_->setIcon(theme_icon("cursors"));
 	action_view_show_cursors_->setShortcut(QKeySequence(Qt::Key_C));
 	connect(action_view_show_cursors_, SIGNAL(triggered(bool)),
 		this, SLOT(on_actionViewShowCursors_triggered()));

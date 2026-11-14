@@ -87,7 +87,9 @@ class View;
 
 namespace toolbars {
 
-class MainBar : public pv::views::trace::StandardBar
+class MainBar :
+	public pv::views::trace::StandardBar,
+	public pv::GlobalSettingsInterface
 {
 	Q_OBJECT
 
@@ -119,6 +121,10 @@ public:
 	MainBar(Session &session, QWidget *parent,
 		pv::views::trace::View *view);
 	~MainBar();
+
+	/* The icons follow the ink of the theme that is in use. */
+	void on_setting_changed(const QString &key, const QVariant &value) override;
+	void refresh_icons();
 	void update_device_list();
 	/* The one list every refresh builds: who is on the bus, plus the board
 	 * this page holds when the scan no longer hands it back. With keep_label
