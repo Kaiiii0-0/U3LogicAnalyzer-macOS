@@ -3,7 +3,10 @@
 /install
 /build_cmake_debug
 /install_debug
+/build_u3ctl
+/build_u3ctl_asan
 /dist
+/captures
 /CMakeFiles
 /.workbuddy
 

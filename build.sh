@@ -22,6 +22,7 @@ DIST_DIR="${SCRIPT_DIR}/dist/U3LogicAnalyzer"
 CLEAN=0
 PACKAGE=0
 DEBUG=0
+BUILD_U3CTL=1
 BUILD_TYPE="Release"
 IS_WINDOWS=0
 IS_MACOS=0
@@ -90,6 +91,7 @@ while [ $# -gt 0 ]; do
         --clean) CLEAN=1 ;;
         --package) PACKAGE=1 ;;
         --debug) DEBUG=1 ;;
+        --no-u3ctl) BUILD_U3CTL=0 ;;
         --qt5|--qt6) ;;   # already picked up above
         --prefix)
             if [ $# -lt 2 ]; then
@@ -346,9 +348,34 @@ RBEOF
     fi
 fi
 
+# ============================================================================
+# Step 5: u3ctl — headless agent/CLI controller (skipped with --no-u3ctl)
+# ============================================================================
+if [ $BUILD_U3CTL -eq 1 ]; then
+    echo ""
+    echo "===== Step 5/5: u3ctl (headless CLI) ====="
+
+    cd "$BUILD_DIR" && mkdir -p u3ctl_build && cd u3ctl_build
+    cmake "${SCRIPT_DIR}/tools/u3ctl" \
+        -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+        -DDISABLE_WERROR=ON $MINGW_EXTRA
+    cmake --build . -j"$JOBS"
+
+    # Put the binary where the GUI binary lives, so one directory holds
+    # both entry points.
+    U3CTL_BIN="$BUILD_DIR/u3ctl_build/u3ctl"
+    [ $IS_WINDOWS -eq 1 ] && U3CTL_BIN="$BUILD_DIR/u3ctl_build/u3ctl.exe"
+    if [ -f "$U3CTL_BIN" ]; then
+        echo "[OK] u3ctl: $U3CTL_BIN"
+    else
+        echo "[WARN] u3ctl binary not found; agent CLI unavailable"
+    fi
+fi
+
 echo ""
 echo "===== BUILD COMPLETE ====="
 echo "  U3LogicAnalyzer: $PV_BIN"
+[ $BUILD_U3CTL -eq 1 ] && echo "  u3ctl:           $BUILD_DIR/u3ctl_build/u3ctl"
 echo ""
 
 # ============================================================================
