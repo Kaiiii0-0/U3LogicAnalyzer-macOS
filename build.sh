@@ -56,6 +56,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
         fi
         if [ -n "$PYTHON_PREFIX" ] && [ -d "$PYTHON_PREFIX/Frameworks/Python.framework/Versions/3.12" ]; then
             export PKG_CONFIG_PATH="$PYTHON_PREFIX/Frameworks/Python.framework/Versions/3.12/lib/pkgconfig:${PKG_CONFIG_PATH}"
+            # libpython3.12.dylib lives inside the framework, not the formula's lib dir.
+            export LDFLAGS="-L$PYTHON_PREFIX/Frameworks/Python.framework/Versions/3.12/lib ${LDFLAGS}"
         fi
         # Qt is found through CMAKE_PREFIX_PATH like the other formulas; add
         # it here instead of on the command line so the rest is not dropped.
@@ -63,7 +65,9 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
         if [ -n "$QT_PREFIX" ]; then
             export CMAKE_PREFIX_PATH="${QT_PREFIX}${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
         fi
-        for formula in "qt@${QT_MAJOR}" boost python@3.12 glib glibmm@2.66 libsigc++@2 libusb hidapi libzip; do
+        # gettext: Homebrew's glib-2.0.pc adds -lintl with a -L path of its
+        # own that the library list below does not cover.
+        for formula in "qt@${QT_MAJOR}" boost python@3.12 glib glibmm@2.66 libsigc++@2 libusb hidapi libzip gettext; do
             p="$(brew --prefix "$formula" 2>/dev/null || true)"
             [ -z "$p" ] && continue
             export CMAKE_PREFIX_PATH="${p}${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"

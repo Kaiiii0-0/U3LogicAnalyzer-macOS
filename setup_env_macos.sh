@@ -32,13 +32,21 @@ GLIB_PREFIX="$(brew --prefix glib)"
 PY_PKGCONFIG="$PYTHON_PREFIX/Frameworks/Python.framework/Versions/3.12/lib/pkgconfig"
 
 export PKG_CONFIG_PATH="$PY_PKGCONFIG:$GLIBMM_PREFIX/lib/pkgconfig:$SIGC_PREFIX/lib/pkgconfig:$GLIB_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH}"
-if ! pkg-config --exists 'python3-embed >= 3.12'; then
+# Homebrew names the .pc file python-3.12-embed (no generic python3-embed).
+EMBED_PC=""
+for pc in python3-embed python-3.12-embed; do
+    if pkg-config --exists "$pc >= 3.12"; then
+        EMBED_PC="$pc"
+        break
+    fi
+done
+if [ -z "$EMBED_PC" ]; then
     echo "[error] python3-embed (3.12) not found after install"
     echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
     pkg-config --list-all | grep -i python || true
     exit 1
 fi
-echo "Using python3-embed $(pkg-config --modversion python3-embed)"
+echo "Using $EMBED_PC $(pkg-config --modversion "$EMBED_PC")"
 if ! pkg-config --exists 'glibmm-2.4 >= 2.32.0'; then
     echo "[error] glibmm-2.4 not found after install"
     echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
@@ -52,8 +60,9 @@ cat <<EOF
  Environment setup complete!
 ============================================
 
-Then build (./build.sh sets Homebrew pkg-config paths automatically):
+Then build (./build.sh sets Homebrew pkg-config paths automatically).
+This script installs qt@5, so pass --qt5 to match (build.sh defaults to Qt6):
 
-  ./build.sh --package
+  ./build.sh --qt5 --package
   open dist/U3LogicAnalyzer/U3LogicAnalyzer.app
 EOF
