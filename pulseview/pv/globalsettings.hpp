@@ -53,6 +53,12 @@ extern const vector<QString> Themes;
  */
 extern const QString Style_Fusion;
 extern const QString Style_Fluent;
+/*
+ * The style of the platform itself, on offer on macOS only: it paints
+ * with the appearance of the system and follows it on its own, so the
+ * application does not hand it a palette.
+ */
+extern const QString Style_NativeMac;
 
 enum UiTheme {
 	/* Follow the color scheme the desktop reports. */

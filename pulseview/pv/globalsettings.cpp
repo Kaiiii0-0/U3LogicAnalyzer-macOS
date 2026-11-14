@@ -91,6 +91,15 @@ const QString Style_Fusion = "fusion";
  */
 const QString Style_Fluent = "fluentui3";
 
+/*
+ * A name the style factory knows on macOS, where it stands for QMacStyle,
+ * the style that hands the drawing of the controls to the system toolkit.
+ * It paints with the appearance of the system rather than with a palette
+ * the application gives it, and it follows a change of that appearance on
+ * its own; see apply_theme() for what the application leaves to it.
+ */
+const QString Style_NativeMac = "macintosh";
+
 namespace {
 
 /*
@@ -350,17 +359,27 @@ void GlobalSettings::set_defaults_where_needed()
 	}
 
 	/*
-	 * Start out with FluentUI3, the style the palettes of the themes are
-	 * made for. Every value that is not one of the two on offer counts as
-	 * missing: an empty one is what a run that was interrupted between two
-	 * settings writes leaves behind, and the others are entries that are no
-	 * longer offered, which is what the settings of an older build carry.
+	 * Start out with the style the platform is used to: FluentUI3, the
+	 * style the palettes of the themes are made for, everywhere but on
+	 * macOS, where the native style is the look the users of the system
+	 * expect and the one that follows its appearance on its own. Fluent
+	 * stays on offer there as a choice. Every value that is not one of
+	 * the styles on offer counts as missing: an empty one is what a run
+	 * that was interrupted between two settings writes leaves behind,
+	 * and the others are entries that are no longer offered, which is
+	 * what the settings of an older build carry.
 	 */
 	const QString style_value =
 		value(Key_General_Style).toString().toLower();
 
+#if defined(Q_OS_MAC)
+	if (style_value != Style_Fluent && style_value != Style_Fusion &&
+		style_value != Style_NativeMac)
+		setValue(Key_General_Style, Style_NativeMac);
+#else
 	if (style_value != Style_Fluent && style_value != Style_Fusion)
 		setValue(Key_General_Style, Style_Fluent);
+#endif
 
 	// Save setup with .sr files by default
 	if (!contains(Key_General_SaveWithSetup))
@@ -506,7 +525,7 @@ void GlobalSettings::apply_theme()
 	/* Light and dark both come from palettes built here, so that the UI
 	 * looks the same on every desktop and stays independent of whatever
 	 * the style would pick for the color scheme of the system. */
-	const bool dark = (theme == Theme_System) ?
+	bool dark = (theme == Theme_System) ?
 		system_prefers_dark(default_palette_) : (theme == Theme_Dark);
 
 	/*
@@ -537,7 +556,23 @@ void GlobalSettings::apply_theme()
 	if (base_style)
 		qApp->setStyle(base_style);
 
-	qApp->setPalette(dark ? make_dark_palette() : make_light_palette());
+	/*
+	 * The native macOS style paints with the appearance of the system and
+	 * takes its colors from it: a palette built here would be ignored or
+	 * fight the style. Leave the palette to the style, and take the scheme
+	 * the rest of the application paints with from the palette the style
+	 * picked for the system appearance -- whatever the theme setting says,
+	 * for a canvas painted dark inside a light system window is what
+	 * honoring the setting there would amount to. The style was set above,
+	 * which put its standard palette in place, and that palette follows
+	 * the appearance the system is in.
+	 */
+#if defined(Q_OS_MAC)
+	if (value(Key_General_Style).toString().toLower() == Style_NativeMac)
+		dark = palette_is_dark(qApp->palette());
+	else
+#endif
+		qApp->setPalette(dark ? make_dark_palette() : make_light_palette());
 
 	/*
 	 * The colors that belong to the scheme are moved along with it. The

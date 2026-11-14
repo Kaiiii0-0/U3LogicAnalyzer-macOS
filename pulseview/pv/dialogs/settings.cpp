@@ -350,6 +350,18 @@ QWidget *Settings::get_general_settings_form(QWidget *parent) const
 	QComboBox *style_cb = new QComboBox();
 	style_cb->addItem(QStringLiteral("FluentUI3"), Style_Fluent);
 	style_cb->addItem(QStringLiteral("Fusion"), Style_Fusion);
+#ifdef Q_OS_MAC
+	/*
+	 * The style of the platform itself, drawn by the system toolkit: it
+	 * paints with the appearance of the system instead of the palette a
+	 * theme hands out, which is why it is offered on macOS only, where it
+	 * is also what the application starts out with. The same argument
+	 * that keeps windowsvista off the list does not apply here: this is
+	 * the style the rest of the desktop is drawn with, so its controls
+	 * belong with the windows around them.
+	 */
+	style_cb->addItem(tr("macOS (native)"), Style_NativeMac);
+#endif
 
 	int style_index = style_cb->findData(
 		settings.value(GlobalSettings::Key_General_Style).toString().toLower());

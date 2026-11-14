@@ -52,6 +52,7 @@
 #include <QTextStream>
 #include <QCoreApplication>
 #include <QDialog>
+#include <QEvent>
 #include <QFont>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -950,6 +951,51 @@ void watch_color_scheme(const std::function<void()> &callback)
 	 */
 	QCoreApplication::instance()->installNativeEventFilter(
 		new ColorSchemeWatcher(callback));
+}
+
+#elif defined(Q_OS_MAC)
+
+/*
+ * macOS announces an appearance change as QEvent::ThemeChange: the cocoa
+ * platform theme follows the appearance of the system and hands the event
+ * to every widget when it changes. Qt 5 has no signal of its own for it,
+ * so an application wide filter is what lets a theme which follows the
+ * system -- and the native style, which paints with the appearance of the
+ * system -- react to a change made while the program is running.
+ */
+class ThemeChangeEventFilter : public QObject
+{
+public:
+	explicit ThemeChangeEventFilter(std::function<void()> callback) :
+		callback_(std::move(callback))
+	{
+	}
+
+	bool eventFilter(QObject *watched, QEvent *event) override
+	{
+		(void)watched;
+
+		if (event->type() == QEvent::ThemeChange) {
+			/* The palette the change brings may not be in place while
+			 * the event is on its way; run once it is. */
+			QTimer::singleShot(0, callback_);
+		}
+
+		return false;
+	}
+
+private:
+	std::function<void()> callback_;
+};
+
+void watch_color_scheme(const std::function<void()> &callback)
+{
+	/*
+	 * The application does not take ownership of the filter, so it is
+	 * left alive on purpose: it has to outlive the application.
+	 */
+	QCoreApplication::instance()->installEventFilter(
+		new ThemeChangeEventFilter(callback));
 }
 
 #else
