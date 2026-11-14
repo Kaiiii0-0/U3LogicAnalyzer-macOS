@@ -2,11 +2,17 @@
 
 [中文文档](README_zh_CN.md)
 
-**U3LogicAnalyzer** is the host application for the WeAct Studio CH32H417 logic analyzer.
+**U3LogicAnalyzer** is the host application for the **WeAct Studio Logic Analyzer V2**
+(WeActStudio.LogicAnalyzerV2, CH32H417 based).
 It is based on sigrok PulseView and ships 132 protocol decoders (I²C, SPI, UART, ...).
 The hardware drivers are trimmed to the two that belong to this device, plus PulseView's
 `demo` driver and the `fx2lafw` driver for FX2 based analyzers. Everything is built by CMake
 through one script.
+
+This repository is a port of the upstream
+[WeActStudio/WeActStudio.U3LogicAnalyzer](https://github.com/WeActStudio/WeActStudio.U3LogicAnalyzer)
+that additionally builds and runs on macOS (Apple Silicon tested against a real V2 board);
+Windows and Linux behave as upstream.
 
 ![Main window](doc/images/en/main-window.png)
 
@@ -80,6 +86,8 @@ with real captures against a CH32H417. No driver install or udev rules are neede
 ```
 
 ## Origin
+
+Upstream project: [WeActStudio/WeActStudio.U3LogicAnalyzer](https://github.com/WeActStudio/WeActStudio.U3LogicAnalyzer).
 
 This software is a modification of the project of **Q2H2**. The CH375 driver
 (`libsigrok/src/hardware/wch-ch32h417/`), the `demo` driver and the parts of libsigrok /

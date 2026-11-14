@@ -2,9 +2,15 @@
 
 [English](README.md)
 
-**U3LogicAnalyzer** 是 WeAct Studio CH32H417 逻辑分析仪的上位机软件，基于 sigrok PulseView，
+**U3LogicAnalyzer** 是 **WeAct Studio Logic Analyzer V2**（WeActStudio.LogicAnalyzerV2，
+CH32H417 主控）的上位机软件，基于 sigrok PulseView，
 自带 132 个协议解码器（I²C / SPI / UART 等）。硬件驱动裁剪到只剩本项目相关的两个，
 另外保留 PulseView 的 `demo` 驱动与给 FX2 方案分析仪用的 `fx2lafw` 驱动，纯 CMake 一键构建。
+
+本仓库移植自上游
+[WeActStudio/WeActStudio.U3LogicAnalyzer](https://github.com/WeActStudio/WeActStudio.U3LogicAnalyzer)，
+额外支持在 macOS 上构建与实机使用（Apple Silicon 已用 V2 板实测）；
+Windows 与 Linux 行为与上游一致。
 
 ![主界面](doc/images/zh_CN/main-window.png)
 
@@ -77,6 +83,8 @@ Apple Silicon 上完成 CH32H417 实机采集，且无需安装任何驱动或 u
 ```
 
 ## 来源
+
+上游项目：[WeActStudio/WeActStudio.U3LogicAnalyzer](https://github.com/WeActStudio/WeActStudio.U3LogicAnalyzer)。
 
 本软件是在 **Q2H2** 的项目上修改而来。CH375 驱动（`libsigrok/src/hardware/wch-ch32h417/`）、
 `demo` 驱动以及 libsigrok / libsigrokdecode 中未改动的源文件仍保留 `Copyright (C) 2026 Q2H2`
