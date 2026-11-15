@@ -668,6 +668,10 @@ void usage(void)
 "                [--trigger \"D0:rising+D1:high\"] (repeatable, = stages)\n"
 "                [--pre 10] [--threshold 1.2V] [--mode logic|adc]\n"
 "                [--timeout 15] [--out FILE.sr] [--demo-pattern random]\n"
+"  u3ctl capture-start [capture args]     # streaming: returns at once\n"
+"  u3ctl capture-status [--job ID]        # samples/trigger/liveness\n"
+"  u3ctl capture-stop [--job ID] [--open] # graceful stop, final JSON\n"
+"  u3ctl capture-list                     # all jobs\n"
 "  u3ctl session info FILE.sr\n"
 "  u3ctl sessions list [--dir DIR]\n"
 "  u3ctl session delete FILE.sr\n"
@@ -735,6 +739,16 @@ int main(int argc, char **argv)
 		ret = cmd_capabilities(clean_argc - 2, clean_argv + 2);
 	} else if (!strcmp(cmd, "capture")) {
 		ret = cmd_capture(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "capture-start")) {
+		ret = cmd_capture_start(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "capture-status")) {
+		ret = cmd_capture_status(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "capture-stop")) {
+		ret = cmd_capture_stop(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "capture-list")) {
+		ret = cmd_capture_list(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "__worker")) {
+		ret = cmd_worker(clean_argc - 2, clean_argv + 2);
 	} else if (!strcmp(cmd, "session") && sub && !strcmp(sub, "info")) {
 		ret = cmd_session_info(clean_argc - 3, clean_argv + 3);
 	} else if (!strcmp(cmd, "sessions") && sub && !strcmp(sub, "list")) {

@@ -25,29 +25,12 @@ struct capture_ctx {
 	gboolean stopped;
 	gboolean hit_limit;
 	gboolean hit_timeout;
+	capture_progress_fn progress;
+	void *prog_user;
+	volatile sig_atomic_t *stop_flag;
 };
 
 /*---- options ------------------------------------------------------------ */
-
-struct cap_opts {
-	const char *driver_name;
-	const char *conn;
-	uint64_t samplerate;
-	uint64_t limit_samples;
-	uint64_t limit_time_samples;
-	char *time_literal;          /* pending "--time 50ms" spec */
-	uint32_t num_channels;       /* 0 = leave driver default */
-	uint32_t pre_ratio;          /* capture ratio percent, 0-100 */
-	double threshold;            /* volts, <0 = unset */
-	const char *mode;            /* "logic"|"adc" or NULL */
-	const char *demo_pattern;
-	GSList *trigger_stages;      /* GSList of GSList of struct trig_spec */
-	int timeout_s;
-	char *out_path;
-	const char *fmt;
-	gboolean overwrite;
-	gboolean open_in_gui;
-};
 
 struct trig_spec {
 	const char *ch_name;
@@ -82,7 +65,7 @@ static GSList *parse_trigger_stage(const char *spec)
 	return specs;
 }
 
-static void parse_capture_args(int argc, char **argv, struct cap_opts *o)
+void parse_capture_args(int argc, char **argv, struct cap_opts *o)
 {
 	int i;
 
@@ -125,6 +108,7 @@ static void parse_capture_args(int argc, char **argv, struct cap_opts *o)
 			o->timeout_s = (int)g_ascii_strtoull(argv[++i], NULL, 10);
 			if (o->timeout_s <= 0)
 				die_json("--timeout must be > 0");
+			o->timeout_explicit = TRUE;
 		} else if (!strcmp(a, "--out") && i + 1 < argc) {
 			o->out_path = g_strdup(argv[++i]);
 		} else if (!strcmp(a, "--overwrite")) {
@@ -137,6 +121,18 @@ static void parse_capture_args(int argc, char **argv, struct cap_opts *o)
 			die_json("unknown capture option '%s'", a);
 		}
 	}
+}
+
+void free_cap_opts(struct cap_opts *o)
+{
+	for (GSList *l = o->trigger_stages; l; l = l->next)
+		g_slist_free_full(l->data, (GDestroyNotify)g_free);
+	g_slist_free(o->trigger_stages);
+	o->trigger_stages = NULL;
+	g_free(o->out_path);
+	o->out_path = NULL;
+	g_free(o->time_literal);
+	o->time_literal = NULL;
 }
 
 /*---- datafeed ------------------------------------------------------------ */
@@ -190,6 +186,12 @@ static void datafeed_in(const struct sr_dev_inst *sdi,
 	}
 	if (junk && junk->len)
 		g_string_free(junk, TRUE);
+
+	/* Streaming workers watch the capture through this hook; one-shot
+	 * capture passes NULL and skips the call. */
+	if (c->progress)
+		c->progress(c->samples_received, c->trigger_seen,
+				c->trigger_pos, c->prog_user);
 }
 
 static gboolean timeout_cb(gpointer data)
@@ -202,6 +204,20 @@ static gboolean timeout_cb(gpointer data)
 		sr_session_stop(c->session);
 	}
 	return G_SOURCE_REMOVE;
+}
+
+/* The worker's SIGTERM lands in a plain flag (async-signal-safe); this
+ * 100ms timer is what carries it into the session's main loop. */
+static gboolean stop_flag_cb(gpointer data)
+{
+	struct capture_ctx *c = data;
+
+	if (c->stop_flag && *c->stop_flag && !c->stopped) {
+		c->stopped = TRUE;
+		sr_session_stop(c->session);
+		return G_SOURCE_REMOVE;
+	}
+	return G_SOURCE_CONTINUE;
 }
 
 /*---- trigger building ------------------------------------------------------ */
@@ -367,41 +383,46 @@ static void resolve_time_limit(struct cap_opts *o, struct sr_dev_driver *d,
 		die_json("bad --time literal '%s'", o->time_literal);
 }
 
-int cmd_capture(int argc, char **argv)
+
+/*---- shared capture pipeline (one-shot and streaming worker) -------------- */
+
+int run_capture_session(struct cap_opts *o, struct capture_result *res,
+		capture_progress_fn progress, void *prog_user,
+		volatile sig_atomic_t *stop_flag)
 {
-	struct cap_opts o;
-	struct capture_ctx c;
 	struct sr_dev_driver *d;
 	struct sr_dev_inst *sdi;
+	struct capture_ctx c;
 	struct sr_trigger *trig;
 	struct sr_session *session = NULL;
 	const struct sr_output_module *omod;
-	GString *j;
 	time_t now;
 	char auto_name[128];
 	int ret;
 
-	parse_capture_args(argc, argv, &o);
+	memset(res, 0, sizeof(*res));
 
-	d = o.driver_name ? find_driver(o.driver_name) : find_default_capture_driver();
+	d = o->driver_name ? find_driver(o->driver_name)
+			: find_default_capture_driver();
 	if (!d)
-		die_json("driver '%s' not found", o.driver_name ? o.driver_name : U3CTL_DEFAULT_DRIVERS);
+		die_json("driver '%s' not found",
+				o->driver_name ? o->driver_name : U3CTL_DEFAULT_DRIVERS);
 
 	/* Channel-count as a scan option is DEMO ONLY: demo builds its
 	 * channels at scan time, while the wch driver lists SR_CONF_CONN
 	 * alone as a scanopt and rejects anything else handed to scan. */
 	GSList *scan_opts = NULL;
-	if (o.num_channels > 0 && !strcmp(d->name, "demo")) {
+	if (o->num_channels > 0 && !strcmp(d->name, "demo")) {
 		struct sr_config *sopt = g_new0(struct sr_config, 1);
 		sopt->key = SR_CONF_NUM_LOGIC_CHANNELS;
-		sopt->data = g_variant_new_int32((int32_t)o.num_channels);
+		sopt->data = g_variant_new_int32((int32_t)o->num_channels);
 		scan_opts = g_slist_append(scan_opts, sopt);
 	}
 
-	sdi = pick_device(d, o.conn, scan_opts);
+	sdi = pick_device(d, o->conn, scan_opts);
 	if (!sdi)
 		die_json("no device found for driver '%s'%s%s", d->name,
-				o.conn ? " matching conn " : "", o.conn ? o.conn : "");
+				o->conn ? " matching conn " : "", o->conn ? o->conn : "");
 
 	/* Open, then configure. */
 	ret = sr_dev_open(sdi);
@@ -409,20 +430,22 @@ int cmd_capture(int argc, char **argv)
 		die_json("failed to open device (GUI running? device busy?): %s",
 				sr_strerror(ret));
 
-	resolve_channels(&o, sdi);
-	set_device_config(&o, d, sdi);
-	resolve_time_limit(&o, d, sdi);
+	resolve_channels(o, sdi);
+	set_device_config(o, d, sdi);
+	resolve_time_limit(o, d, sdi);
 
-	/* Output path. */
-	if (!o.out_path) {
+	/* Output path: auto-name lands back in o->out_path so callers (the
+	 * worker writing its state file) learn what was chosen. */
+	if (!o->out_path || !o->out_path[0]) {
 		now = time(NULL);
-		strftime(auto_name, sizeof(auto_name), "captures/cap-%Y%m%d-%H%M%S.sr",
-				localtime(&now));
-		o.out_path = g_strdup(auto_name);
+		strftime(auto_name, sizeof(auto_name),
+				"captures/cap-%Y%m%d-%H%M%S.sr", localtime(&now));
+		g_free(o->out_path);
+		o->out_path = g_strdup(auto_name);
 	}
-	if (!o.overwrite && g_file_test(o.out_path, G_FILE_TEST_EXISTS))
-		die_json("output file '%s' exists, use --overwrite", o.out_path);
-	gchar *dir = g_path_get_dirname(o.out_path);
+	if (!o->overwrite && g_file_test(o->out_path, G_FILE_TEST_EXISTS))
+		die_json("output file '%s' exists, use --overwrite", o->out_path);
+	gchar *dir = g_path_get_dirname(o->out_path);
 	g_mkdir_with_parents(dir, 0755);
 	g_free(dir);
 
@@ -436,12 +459,16 @@ int cmd_capture(int argc, char **argv)
 	 * streams until told, so without it a --samples run sat out the
 	 * whole timeout instead of stopping at the count.
 	 */
-	c.limit_samples = o.limit_samples ? o.limit_samples : o.limit_time_samples;
-	c.output = sr_output_new(omod, NULL, sdi, o.out_path);
+	c.limit_samples = o->limit_samples ? o->limit_samples
+			: o->limit_time_samples;
+	c.output = sr_output_new(omod, NULL, sdi, o->out_path);
 	if (!c.output)
 		die_json("failed to create srzip output");
+	c.progress = progress;
+	c.prog_user = prog_user;
+	c.stop_flag = stop_flag;
 
-	trig = build_trigger(&o, sdi);
+	trig = build_trigger(o, sdi);
 
 	ret = sr_session_new(G.sr_ctx, &session);
 	if (ret != SR_OK)
@@ -452,7 +479,9 @@ int cmd_capture(int argc, char **argv)
 	if (trig)
 		sr_session_trigger_set(session, trig);
 
-	g_timeout_add_seconds(o.timeout_s, timeout_cb, &c);
+	g_timeout_add_seconds(o->timeout_s, timeout_cb, &c);
+	if (stop_flag)
+		g_timeout_add(100, stop_flag_cb, &c);
 
 	ret = sr_session_start(session);
 	if (ret != SR_OK)
@@ -463,13 +492,64 @@ int cmd_capture(int argc, char **argv)
 	/* Finish output file (srzip flushes on DF_END which we forwarded). */
 	sr_output_free(c.output);
 
-	uint64_t rate = get_samplerate(d, sdi);
-	double duration = rate ? (double)c.samples_received / rate : 0.0;
+	res->rate = get_samplerate(d, sdi);
+	res->samples = c.samples_received;
+	res->trigger_seen = c.trigger_seen;
+	res->trigger_pos = c.trigger_pos;
+	res->hit_limit = c.hit_limit;
+	res->hit_timeout = c.hit_timeout;
+	res->duration_s = res->rate ? (double)c.samples_received / res->rate : 0.0;
+	res->conn = g_strdup(sr_dev_inst_connid_get(sdi));
+	res->driver = g_strdup(d->name);
+
+	return 0;
+}
+
+GString *capture_result_json(struct cap_opts *o, const char *driver_name,
+		const struct capture_result *res)
+{
+	GString *j = g_string_new(NULL);
+
+	g_string_append(j, "{");
+	json_kv_str(j, "file", o->out_path ? o->out_path : "");
+	g_string_append_c(j, ',');
+	json_kv_str(j, "driver", driver_name ? driver_name : "");
+	g_string_append_c(j, ',');
+	json_kv_str(j, "conn", res->conn ? res->conn : "");
+	g_string_append_c(j, ',');
+	json_kv_u64(j, "samplerate", res->rate);
+	g_string_append_c(j, ',');
+	json_kv_u64(j, "samples", res->samples);
+	g_string_append_c(j, ',');
+	json_kv_f(j, "duration_s", res->duration_s);
+	g_string_append_c(j, ',');
+	json_kv_u64(j, "channels", o->num_channels);
+	g_string_append_c(j, ',');
+	json_kv_bool(j, "trigger", res->trigger_seen);
+	if (res->trigger_seen) {
+		g_string_append_c(j, ',');
+		json_kv_u64(j, "trigger_position_sample", res->trigger_pos);
+	}
+	g_string_append_c(j, ',');
+	json_kv_bool(j, "stopped_by_limit", res->hit_limit);
+	g_string_append_c(j, ',');
+	json_kv_bool(j, "stopped_by_timeout", res->hit_timeout);
+	return j;
+}
+
+int cmd_capture(int argc, char **argv)
+{
+	struct cap_opts o;
+	struct capture_result res;
+	GString *j;
+	int gui_open = -1;
+
+	parse_capture_args(argc, argv, &o);
+	run_capture_session(&o, &res, NULL, NULL, NULL);
 
 	/* Hand the fresh capture to the already-running GUI, when there is
 	 * one. Silence is not an error: the .sr file is on disk either way
 	 * and the JSON below says what happened. */
-	int gui_open = -1;
 	if (o.open_in_gui) {
 		char abspath[PATH_MAX];
 		const char *open_path = o.out_path;
@@ -478,46 +558,26 @@ int cmd_capture(int argc, char **argv)
 		gui_open = open_in_gui(open_path);
 	}
 
-	j = g_string_new(NULL);
-	g_string_append(j, "{");
-	json_kv_str(j, "file", o.out_path);
-	g_string_append_c(j, ',');
-	json_kv_str(j, "driver", d->name);
-	g_string_append_c(j, ',');
-	json_kv_str(j, "conn", sr_dev_inst_connid_get(sdi));
-	g_string_append_c(j, ',');
-	json_kv_u64(j, "samplerate", rate);
-	g_string_append_c(j, ',');
-	json_kv_u64(j, "samples", c.samples_received);
-	g_string_append_c(j, ',');
-	json_kv_f(j, "duration_s", duration);
-	g_string_append_c(j, ',');
-	json_kv_u64(j, "channels", o.num_channels);
-	g_string_append_c(j, ',');
-	json_kv_bool(j, "trigger", c.trigger_seen);
-	if (c.trigger_seen) {
-		g_string_append_c(j, ',');
-		json_kv_u64(j, "trigger_position_sample", c.trigger_pos);
-	}
-	g_string_append_c(j, ',');
-	json_kv_bool(j, "stopped_by_limit", c.hit_limit);
-	g_string_append_c(j, ',');
-	json_kv_bool(j, "stopped_by_timeout", c.hit_timeout);
+	j = capture_result_json(&o, res.driver, &res);
 	if (o.open_in_gui) {
 		g_string_append_c(j, ',');
 		if (gui_open == 0)
 			json_kv_str(j, "gui", "existing-instance");
 		else if (gui_open == 1) {
 			json_kv_bool(j, "gui_opened", FALSE);
+			g_string_append_c(j, ',');
 			json_kv_str(j, "reason", "no running GUI instance");
 		} else {
 			json_kv_bool(j, "gui_opened", FALSE);
+			g_string_append_c(j, ',');
 			json_kv_str(j, "reason", "ipc error");
 		}
 	}
 	g_string_append(j, "}");
 	printf("%s\n", j->str);
 	g_string_free(j, TRUE);
-	g_free(o.out_path);
+	free_cap_opts(&o);
+	g_free(res.conn);
+	g_free(res.driver);
 	return 0;
 }

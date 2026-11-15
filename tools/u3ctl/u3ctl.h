@@ -22,6 +22,7 @@
 #ifndef U3CTL_U3CTL_H
 #define U3CTL_U3CTL_H
 
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <glib.h>
@@ -81,9 +82,71 @@ int trigger_match_from_name(const char *name, int *match);
 
 /*---- capture.c ---------------------------------------------------------- */
 
+struct cap_opts {
+	const char *driver_name;
+	const char *conn;
+	uint64_t samplerate;
+	uint64_t limit_samples;
+	uint64_t limit_time_samples;
+	char *time_literal;          /* pending "--time 50ms" spec */
+	uint32_t num_channels;       /* 0 = leave driver default */
+	uint32_t pre_ratio;          /* capture ratio percent, 0-100 */
+	double threshold;            /* volts, <0 = unset */
+	const char *mode;            /* "logic"|"adc" or NULL */
+	const char *demo_pattern;
+	GSList *trigger_stages;      /* GSList of GSList of struct trig_spec */
+	int timeout_s;
+	gboolean timeout_explicit;   /* --timeout given; else caller default */
+	char *out_path;
+	const char *fmt;
+	gboolean overwrite;
+	gboolean open_in_gui;
+};
+
+struct capture_result {
+	char *conn;
+	char *driver;
+	uint64_t rate;
+	uint64_t samples;
+	uint64_t trigger_pos;
+	gboolean trigger_seen;
+	gboolean hit_limit;
+	gboolean hit_timeout;
+	double duration_s;
+};
+
+typedef void (*capture_progress_fn)(uint64_t samples, gboolean trigger_seen,
+		uint64_t trigger_pos, void *user);
+
+/* The whole one-shot capture pipeline: scan → open → config → trigger →
+ * srzip → session run. Fills res; calls progress (throttling is the
+ * callback's business) from the datafeed; honors stop_flag from a 100ms
+ * GLib timer (worker's SIGTERM path). Exits via die_json on errors. */
+int run_capture_session(struct cap_opts *o, struct capture_result *res,
+		capture_progress_fn progress, void *prog_user,
+		volatile sig_atomic_t *stop_flag);
+
+/* Parse the shared capture argument set (also used by the worker and
+ * capture-start, which forward the very same options). */
+void parse_capture_args(int argc, char **argv, struct cap_opts *o);
+void free_cap_opts(struct cap_opts *o);
+
+/* Shared final-JSON builder (without the GUI/open part — callers append
+ * what they need). Caller owns the returned string. */
+GString *capture_result_json(struct cap_opts *o, const char *driver_name,
+		const struct capture_result *res);
+
 int cmd_capture(int argc, char **argv);
 int cmd_devices_list(int argc, char **argv);
 int cmd_capabilities(int argc, char **argv);
+
+/*---- streaming.c ----------------------------------------------------------- */
+
+int cmd_capture_start(int argc, char **argv);
+int cmd_capture_status(int argc, char **argv);
+int cmd_capture_stop(int argc, char **argv);
+int cmd_capture_list(int argc, char **argv);
+int cmd_worker(int argc, char **argv);
 
 /*---- ipc.c ----------------------------------------------------------------- */
 

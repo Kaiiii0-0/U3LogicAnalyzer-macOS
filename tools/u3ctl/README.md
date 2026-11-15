@@ -27,6 +27,10 @@ u3ctl capture [--driver demo|wch-ch32h417-libusb] [--conn SUBSTR]
               [--timeout 15] [--out FILE.sr] [--overwrite] [--open]
               [--demo-pattern random]              # demo 驱动专用
 u3ctl open FILE.sr                                 # 推送给已运行的 GUI 实例
+u3ctl capture-start [capture 参数]                  # 流式:立即返回 job(<1s)
+u3ctl capture-status [--job ID]                    # 进度/触发/存活(只读)
+u3ctl capture-stop  [--job ID] [--open]            # 优雅停止→最终 JSON
+u3ctl capture-list                                 # 全部 job(含 interrupted)
 u3ctl session info FILE.sr                         # 采样率/样本数/时长/通道/触发
 u3ctl sessions list [--dir DIR] / session delete FILE.sr
 u3ctl activity FILE.sr [--bucket N] [--channels D0,D1]   # 每桶翻转数→哪段有信号
@@ -86,6 +90,17 @@ python3 tools/u3ctl/tests/make_uart_sr.py captures/uart.sr 1000000 100000 0x55 0
 build_u3ctl/u3ctl decode captures/uart.sr --stack uart --channel tx=D0 \
     --pdopt baudrate=100000        # → decoded bytes: ['55', '33', 'AA']
 ```
+
+## 流式采集(附录 C)
+
+**先布防、后触发**:采集跑在"上电 / 复现故障 / 人机对话"期间。worker 与一次性
+capture 共用同一管线;状态即磁盘(`captures/.job-<id>.json`,原子写);
+SIGTERM 优雅停止是唯一保证 `.sr` 完整的出口,kill -9 的数据如实标记
+`interrupted` 不抢救。默认安全超时 600s(`--timeout` 覆盖);不给
+`--samples/--time` 则跑到 stop。设备独占:活跃 job 期间二次 start 报 busy。
+
+验证:`python3 tools/u3ctl/tests/test_streaming.py`(V1–V10 demo 矩阵,
+V1 启动 <1s 硬门槛;V10 需 GUI 在跑,否则跳过)。
 
 ## MCP 原生调用(P3)
 

@@ -113,6 +113,74 @@ TOOLS = [
         },
     },
     {
+        "name": "u3_capture_start",
+        "description": (
+            "STREAMING capture (plan C): arms a capture in a detached "
+            "worker and returns a job id at once (<1s), so the capture "
+            "can run across a whole conversation — e.g. arm first, THEN "
+            "have the user power the board or reproduce a fault, then "
+            "u3_capture_stop. Same arguments and device rules as "
+            "u3_capture (exclusive USB; sample rates from "
+            "u3_capabilities). Without samples/time it runs until "
+            "stopped (default safety timeout 600s). Poll "
+            "u3_capture_status; finish with u3_capture_stop. Prefer "
+            "plain u3_capture for fixed windows — it is simpler."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "driver": {"type": "string"},
+                "conn": {"type": "string"},
+                "rate": {"type": "string"},
+                "channels": {"type": "integer"},
+                "samples": {"type": "string", "description": "Auto-stop after N samples"},
+                "time": {"type": "string", "description": "Auto-stop after e.g. 2s"},
+                "trigger": {"type": "array", "items": {"type": "string"}},
+                "pre": {"type": "integer"},
+                "threshold": {"type": "number"},
+                "timeout": {"type": "integer", "description": "Safety limit seconds (default 600)"},
+                "out": {"type": "string"},
+                "overwrite": BOOL,
+                "demo_pattern": {"type": "string"},
+            },
+        },
+    },
+    {
+        "name": "u3_capture_status",
+        "description": (
+            "Progress of a streaming capture: samples so far, trigger "
+            "seen, whether the worker is alive. Read-only, never touches "
+            "the device. A non-terminal job whose worker died is "
+            "reported as interrupted/failed — never as done."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {"job": {"type": "string", "description": "Job id (default: latest active)"}},
+        },
+    },
+    {
+        "name": "u3_capture_stop",
+        "description": (
+            "Gracefully finish a streaming capture: the worker ends the "
+            "session, the .sr is completed, and the same JSON shape as "
+            "u3_capture comes back. open=true pushes the capture into "
+            "the running GUI for the user. A job that refuses to stop "
+            "is killed and reported interrupted."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "job": {"type": "string"},
+                "open": {"type": "boolean"},
+            },
+        },
+    },
+    {
+        "name": "u3_capture_jobs",
+        "description": "All streaming jobs with status and liveness (done/failed/interrupted included).",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
         "name": "u3_session_info",
         "description": (
             "Metadata of a .sr capture: samplerate, total samples, "
@@ -368,6 +436,17 @@ ARGMAP = {
         ("overwrite", ["--overwrite"]), ("demo_pattern", ["--demo-pattern"]),
         ("open", ["--open"]),
     ],
+    "u3_capture_start": [
+        ("driver", ["--driver"]), ("conn", ["--conn"]), ("rate", ["--rate"]),
+        ("channels", ["--channels"]), ("samples", ["--samples"]),
+        ("time", ["--time"]), ("trigger", ["--trigger"]), ("pre", ["--pre"]),
+        ("threshold", ["--threshold"]), ("timeout", ["--timeout"]),
+        ("out", ["--out"]), ("overwrite", ["--overwrite"]),
+        ("demo_pattern", ["--demo-pattern"]),
+    ],
+    "u3_capture_status": [("job", ["--job"])],
+    "u3_capture_stop": [("job", ["--job"]), ("open", ["--open"])],
+    "u3_capture_jobs": [],
     "u3_session_info": [],
     "u3_profile": [("from", ["--from"]), ("to", ["--to"])],
     "u3_activity": [
@@ -407,6 +486,10 @@ COMMANDS = {
     "u3_list_devices": ["devices", "list"],
     "u3_capabilities": ["capabilities"],
     "u3_capture": ["capture"],
+    "u3_capture_start": ["capture-start"],
+    "u3_capture_status": ["capture-status"],
+    "u3_capture_stop": ["capture-stop"],
+    "u3_capture_jobs": ["capture-list"],
     "u3_session_info": ["session", "info"],
     "u3_profile": ["profile"],
     "u3_activity": ["activity"],

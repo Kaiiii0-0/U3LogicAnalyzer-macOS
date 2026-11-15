@@ -28,6 +28,7 @@ find_library(SIGROKDECODE_LIB NAMES sigrokdecode HINTS "${U3CTL_PREFIX}/lib" REQ
 add_executable(u3ctl
 	u3ctl.c
 	capture.c
+	streaming.c
 	sessionfile.c
 	decode.c
 	query.c

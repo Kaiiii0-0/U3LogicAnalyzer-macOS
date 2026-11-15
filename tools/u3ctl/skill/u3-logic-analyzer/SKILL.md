@@ -42,6 +42,10 @@ $BIN decode FILE.sr --stack i2c[,eeprom24xx]          # 堆叠解码
       [--from 8k --to 12k] [--class start,ack] [--search NACK] [--max-rows 500]
 $BIN decoders list [--search i2c] / decoders info PD  # 132 个解码器检索与详情
 $BIN export FILE.sr --format csv|vcd|hex|bits|binary|wav --out FILE
+$BIN capture-start [capture 参数] --out x.sr         # 流式布防:立即返回 job(<1s)
+$BIN capture-status [--job ID]                       # 进度(只读,不碰设备)
+$BIN capture-stop [--job ID] [--open]                # 优雅停止→最终 JSON
+$BIN capture-list                                    # 全部 job
 $BIN open FILE.sr                                     # 推送给已运行的 GUI 实例
 ```
 
@@ -80,6 +84,15 @@ $BIN open FILE.sr                                     # 推送给已运行的 GU
 - **demo 驱动**(`--driver demo`)无硬件可测全流程,适合先验证命令链路;
   demo 波形是随机/图案信号,decode 出的内容无真实协议意义。
 - 阈值范围按硬件批次不同(0.6–1.5V 或 0.8–2.3V),先查 `capabilities`。
+
+## 流式采集:何时用、怎么用
+
+**默认用一次性 capture**。只有"事件何时发生不可知/要靠人制造"才用三步式:
+- 抓上电瞬间:先 `capture-start` → 让用户上电 → 观察 status 样本增长 → `capture-stop`
+- 等罕见故障:`capture-start --trigger <条件> --samples <深度> --timeout 600` 挂后台
+- 人机协作:布防后与用户对话,复现完成再 stop,然后 decode/render
+注意:不给 --samples/--time 则跑到 stop;kill -9 的数据标记 interrupted 不可用,
+SIGTERM(即 capture-stop)是唯一保证 .sr 完整的出口;设备独占,活跃 job 时二次 start 报 busy。
 
 ## 无 GUI 打开方式
 
