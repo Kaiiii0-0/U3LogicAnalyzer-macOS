@@ -257,7 +257,12 @@ QString SignalBase::display_name() const
 
 void SignalBase::set_name(QString name)
 {
-	if (channel_)
+	/*
+	 * libsigrok rejects empty names with SR_ERR_ARG and the C++ binding
+	 * throws on it; an exception leaving a Qt slot would end the
+	 * process, so empty names never reach the channel here.
+	 */
+	if (channel_ && !name.isEmpty())
 		channel_->set_name(name.toUtf8().constData());
 
 	name_ = name;

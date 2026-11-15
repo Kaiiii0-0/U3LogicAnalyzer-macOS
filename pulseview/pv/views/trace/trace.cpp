@@ -508,6 +508,17 @@ void Trace::on_popup_closed()
 
 void Trace::on_nameedit_changed(const QString &name)
 {
+	/*
+	 * The name edit fires on every keystroke, including the one that
+	 * empties it. An empty name is rejected by libsigrok
+	 * (sr_dev_channel_name_set returns SR_ERR_ARG for ""), the C++
+	 * binding turns that into an exception, and an exception escaping a
+	 * Qt slot terminates the process. Ignore the transient empty state;
+	 * the moment the user types on, changes propagate as before.
+	 */
+	if (name.isEmpty())
+		return;
+
 	/* This event handler notifies SignalBase that the name changed */
 	base_->set_name(name);
 }
