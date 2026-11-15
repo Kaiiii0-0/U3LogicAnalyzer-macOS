@@ -293,6 +293,7 @@ int cmd_export(int argc, char **argv)
 	struct export_ctx e;
 	const struct sr_output_module *omod;
 	const char *path = NULL, *fmt = NULL, *out_path = NULL;
+	gboolean overwrite = FALSE;
 	int i, ret;
 
 	for (i = 0; i < argc; i++) {
@@ -300,6 +301,8 @@ int cmd_export(int argc, char **argv)
 			fmt = argv[++i];
 		} else if (!strcmp(argv[i], "--out") && i + 1 < argc) {
 			out_path = argv[++i];
+		} else if (!strcmp(argv[i], "--overwrite")) {
+			overwrite = TRUE;
 		} else if (!g_str_has_prefix(argv[i], "--")) {
 			path = argv[i];
 		}
@@ -310,8 +313,10 @@ int cmd_export(int argc, char **argv)
 	omod = sr_output_find((char *)fmt);
 	if (!omod)
 		die_json("unknown output format '%s'", fmt);
-	if (g_file_test(out_path, G_FILE_TEST_EXISTS))
-		die_json("output file '%s' exists, delete it first", out_path);
+	if (!overwrite && g_file_test(out_path, G_FILE_TEST_EXISTS))
+		die_json("output file '%s' exists, use --overwrite", out_path);
+	if (overwrite && g_file_test(out_path, G_FILE_TEST_EXISTS))
+		remove(out_path);
 
 	if (load_session_file(path, &ls) != SR_OK)
 		die_json("cannot load session file '%s'", path);

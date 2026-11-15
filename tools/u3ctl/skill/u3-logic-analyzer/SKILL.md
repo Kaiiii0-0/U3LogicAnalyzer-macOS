@@ -30,6 +30,13 @@ $BIN capture [--driver demo|wch-ch32h417-libusb]
       [--pre 10] [--threshold 1.2V] [--timeout 15]
       [--out captures/x.sr] [--overwrite] [--open]    # --open: 推给运行中的 GUI
 $BIN session info FILE.sr                             # 采样率/样本数/时长/通道/触发位置
+$BIN profile FILE.sr                                  # 自动画像:通道角色+协议候选+活动窗
+$BIN activity FILE.sr [--bucket N] [--channels D0,D1] # 每桶翻转数
+$BIN measure FILE.sr [--channels ...] [--from --to]   # 频率/占空比/脉宽/首末边沿
+$BIN edges FILE.sr --channels D0 [--type rising] [--max 200]
+$BIN sample FILE.sr --at 8352 / slice --from A --to B --format hex|bits|base64 (≤64K)
+$BIN overview FILE.sr [--points 2000]                 # 每桶 min/max/toggles
+$BIN render FILE.sr --out wave.png [--channels ...] [--width 1600] [--format png|svg]
 $BIN decode FILE.sr --stack i2c[,eeprom24xx]          # 堆叠解码
       [--channel scl=D0 --channel sda=D1] [--pdopt k=v]
       [--from 8k --to 12k] [--class start,ack] [--search NACK] [--max-rows 500]
@@ -47,15 +54,16 @@ $BIN open FILE.sr                                     # 推送给已运行的 GU
 2. `capabilities` — 取采样率档位/触发类型,别猜
 3. `capture` — 采样率 ≥ 目标信号带宽 ×5;样本数给足;需要起始定位就配 `--trigger`
 4. `session info` — 确认实际采到多少
-5. `decode --stack <pd>` — 先全窗口跑,看 `total_rows`;>0 再用
+5. `profile` — 冷启动首选:直接给出通道角色(时钟/数据)、协议候选、活动窗口
+6. `decode --stack <pd>` — 先全窗口跑,看 `total_rows`;>0 再用
    `--search`/`--class`/`--from --to` 收敛到关注点
-6. 需要看图/位级细节时缩小窗口再 decode 或 export
-7. 结论里附 `.sr` 路径;`--open` 或 `open` 可把波形推到用户桌面的 GUI 会话页
+7. `measure`/`edges` 拿频率、占空比、精确边沿;`render` 出 PNG/SVG 波形图;
+   `slice`/`sample` 拿位级数据
+8. 结论里附 `.sr` 路径;`--open` 或 `open` 可把波形推到用户桌面的 GUI 会话页
 
-冷启动不知道是什么协议时:直接真机采一段,用 `--search` 逐个候选
-(`i2c`/`spi`/`uart`/`can`)试解,哪个 total_rows 高且事件连贯就用哪个;
-通道映射优先按时钟/数据角色猜(SCL/SCK 有频率规律、数据线翻转多)。
-`--driver demo` 只用于验证命令链路,不要拿 demo 波形当真实协议。
+冷启动不知道是什么协议时:`profile` 的候选 + guess_bitrate 猜测波特率;
+候选解不通再用 `--search` 逐个试(`i2c`/`spi`/`uart`/`can`),哪个 total_rows
+高且事件连贯就用哪个。`--driver demo` 只用于验证命令链路。
 
 ## 硬约束(违反会误判)
 

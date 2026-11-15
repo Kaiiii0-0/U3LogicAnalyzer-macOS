@@ -142,7 +142,7 @@ static void bin_cb(struct srd_proto_data *pdata, void *cb_data)
 
 /* Resolution order: $SIGROKDECODE_DIR, the repo install prefix, then the
  * library default. Mirrors start_pv.sh for GUI runs. */
-static const char *decoders_path(void)
+const char *decoders_path(void)
 {
 	static char path_buf[512];
 	const char *env = g_getenv("SIGROKDECODE_DIR");

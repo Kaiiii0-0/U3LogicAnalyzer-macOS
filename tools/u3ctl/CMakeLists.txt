@@ -30,8 +30,13 @@ add_executable(u3ctl
 	capture.c
 	sessionfile.c
 	decode.c
+	query.c
+	render.c
 	ipc.c
 )
+
+find_package(ZLIB REQUIRED)
+target_link_libraries(u3ctl PRIVATE ZLIB::ZLIB)
 
 target_compile_definitions(u3ctl PRIVATE
 	U3CTL_PREFIX_PATH="${U3CTL_PREFIX}"

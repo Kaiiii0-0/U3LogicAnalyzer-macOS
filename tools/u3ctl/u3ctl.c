@@ -676,6 +676,15 @@ void usage(void)
 "                [--max-rows N] [--binary FILE]\n"
 "  u3ctl decoders list [--search SUBSTR]\n"
 "  u3ctl decoders info PD\n"
+"  u3ctl activity FILE.sr [--bucket N] [--channels D0,D1]\n"
+"  u3ctl measure FILE.sr [--channels D0,D1] [--from --to]\n"
+"  u3ctl edges FILE.sr --channels D0 [--type rising] [--max 200]\n"
+"  u3ctl sample FILE.sr --at 8352\n"
+"  u3ctl slice FILE.sr --from A --to B [--format hex|bits|base64]\n"
+"  u3ctl overview FILE.sr [--points 2000]\n"
+"  u3ctl profile FILE.sr\n"
+"  u3ctl render FILE.sr --out wave.png [--channels D0,D1] [--from --to]\n"
+"                [--width 1600] [--row-height 40] [--format png|svg]\n"
 "  u3ctl export FILE.sr --format csv|vcd|... --out FILE\n"
 "\n"
 "All commands print JSON to stdout. Errors: {\"error\":...} + exit 2.\n");
@@ -738,6 +747,22 @@ int main(int argc, char **argv)
 		ret = cmd_decoders_list(clean_argc - 3, clean_argv + 3);
 	} else if (!strcmp(cmd, "decoders") && sub && !strcmp(sub, "info")) {
 		ret = cmd_decoders_info(clean_argc - 3, clean_argv + 3);
+	} else if (!strcmp(cmd, "activity")) {
+		ret = cmd_activity(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "measure")) {
+		ret = cmd_measure(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "edges")) {
+		ret = cmd_edges(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "sample")) {
+		ret = cmd_sample(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "slice")) {
+		ret = cmd_slice(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "overview")) {
+		ret = cmd_overview(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "profile")) {
+		ret = cmd_profile(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "render")) {
+		ret = cmd_render(clean_argc - 2, clean_argv + 2);
 	} else if (!strcmp(cmd, "export")) {
 		ret = cmd_export(clean_argc - 2, clean_argv + 2);
 	} else if (!strcmp(cmd, "open")) {

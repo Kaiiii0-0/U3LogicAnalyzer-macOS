@@ -29,6 +29,15 @@ u3ctl capture [--driver demo|wch-ch32h417-libusb] [--conn SUBSTR]
 u3ctl open FILE.sr                                 # 推送给已运行的 GUI 实例
 u3ctl session info FILE.sr                         # 采样率/样本数/时长/通道/触发
 u3ctl sessions list [--dir DIR] / session delete FILE.sr
+u3ctl activity FILE.sr [--bucket N] [--channels D0,D1]   # 每桶翻转数→哪段有信号
+u3ctl measure FILE.sr [--channels ...] [--from --to]     # 频率/占空比/脉宽统计/首末边沿
+u3ctl edges FILE.sr --channels D0 [--type rising] [--max 200]  # 精确边沿时刻表
+u3ctl sample FILE.sr --at 8352                     # 单点各位值
+u3ctl slice FILE.sr --from A --to B [--format hex|bits|base64]  # ≤64K 样本窗口
+u3ctl overview FILE.sr [--points 2000]             # 每桶 min/max/toggles 粗轮廓
+u3ctl profile FILE.sr                              # 自动画像:通道角色+协议候选+活动窗
+u3ctl render FILE.sr --out wave.png [--channels D0,D1] [--from --to]
+      [--width 1600] [--row-height 40] [--format png|svg]   # 波形图(PNG/SVG)
 u3ctl decode FILE.sr --stack i2c[,eeprom24xx]      # 堆叠解码
               [--channel scl=D0 --channel sda=D1]  # PD 通道 → 设备通道
               [--pdopt k=v] [--from 8k --to 12k] [--class start,ack]
@@ -48,8 +57,9 @@ u3ctl export FILE.sr --format csv|vcd|hex|ascii|bits|binary|wav --out FILE
 
 ```
 devices list → capabilities → capture → session info
+  → profile(通道角色/协议候选/活动窗,冷启动首选)
   → decode(全窗口,看 total_rows)→ --search/--class 收敛异常
-  → 缩小窗口再 decode/export 深挖 → 结论(附 .sr 路径供 GUI 回看)
+  → measure/edges 拿频率与边沿 → render 出波形图 → 结论(附 .sr 路径)
 ```
 
 `.sr` 文件可直接被 GUI(`U3LogicAnalyzer -i file.sr`)打开回看。

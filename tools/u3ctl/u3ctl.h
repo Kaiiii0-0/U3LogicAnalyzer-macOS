@@ -92,6 +92,65 @@ int open_in_gui(const char *path);
 void cmd_open_json(const char *path, int ret);
 int cmd_open(int argc, char **argv);
 
+/*---- query.c: drill-down queries over loaded sessions ---------------------- */
+
+struct loaded_session;
+struct sr_channel;
+
+/* A logic sample word read little-endian out of the unitsize bytes. */
+struct logic_sample {
+	const uint8_t *data;
+	int unitsize;
+};
+
+/* Pointer to sample v of the loaded session, or NULL out of range.
+ * Chunks are contiguous by construction of replay_collect(). */
+const uint8_t *sample_ptr(struct loaded_session *ls, uint64_t v);
+
+/* Bit value of channel index in a sample word. */
+int sample_bit(const uint8_t *data, int unitsize, int index);
+
+/* Resolve a window: sample numbers or time literals at the session rate.
+ * Missing bounds default to the whole capture. */
+void resolve_window(struct loaded_session *ls, int argc, char **argv,
+		uint64_t *from, uint64_t *to);
+
+/* Extract the bare FILE.sr from an argv that also carries options. */
+const char *query_arg_file(int argc, char **argv);
+
+/* Resolve --channels D0,D1 (NULL = all enabled logic channels). */
+GSList *resolve_chans(struct loaded_session *ls, int argc, char **argv);
+const char *chan_name(struct sr_channel *ch);
+int chan_index(struct sr_channel *ch);
+
+int cmd_activity(int argc, char **argv);
+int cmd_measure(int argc, char **argv);
+int cmd_edges(int argc, char **argv);
+int cmd_sample(int argc, char **argv);
+int cmd_slice(int argc, char **argv);
+int cmd_overview(int argc, char **argv);
+int cmd_profile(int argc, char **argv);
+
+/* Profile internals shared with nothing else. */
+struct ch_stats {
+	gboolean active;
+	gboolean clock_like;
+	double freq_hz;
+	double duty;
+	double seg_min_s, seg_max_s, seg_mean_s; /* level-segment widths, seconds */
+	double pulse_regularity;   /* (max-min)/mean over segments, <1 = regular */
+	uint64_t toggles;
+	uint64_t first_edge, last_edge;
+	int first_type, last_type;
+};
+
+void measure_channel(struct loaded_session *ls, int index,
+		uint64_t from, uint64_t to, struct ch_stats *st);
+
+/*---- render.c --------------------------------------------------------------- */
+
+int cmd_render(int argc, char **argv);
+
 /*---- sessionfile.c ------------------------------------------------------- */
 
 int cmd_session_info(int argc, char **argv);
@@ -126,6 +185,10 @@ void free_loaded_session(struct loaded_session *ls);
 int cmd_decode(int argc, char **argv);
 int cmd_decoders_list(int argc, char **argv);
 int cmd_decoders_info(int argc, char **argv);
+
+/* srd decoder path resolution (SIGROKDECODE_DIR → install prefix → lib
+ * default); shared by decode and profile. */
+const char *decoders_path(void);
 
 /* Replay loaded session through datafeed, collecting logic chunks. */
 int replay_collect(struct loaded_session *ls, GSList **chunks,
