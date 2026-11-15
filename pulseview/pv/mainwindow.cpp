@@ -78,6 +78,7 @@
 #include "application.hpp"
 #include "devicemanager.hpp"
 #include "devices/hardwaredevice.hpp"
+#include "devices/sessionfile.hpp"
 #include "dialogs/settings.hpp"
 #include "usbapi.hpp"
 #include "globalsettings.hpp"
@@ -154,6 +155,22 @@ MainWindow::MainWindow(QWidget *parent) :
 		sigrok_context_ = sigrok::Context::create();
 	device_manager_ = new pv::DeviceManager(sigrok_context_, "", true);
 	sessions_.resize(0);
+
+	/*
+	 * The autosave behind schedule_save_sessions(): one write a beat
+	 * after the burst of changes settles. QSettings batches its disk
+	 * work on its own, so the timer only needs to keep the write off
+	 * the keystroke.
+	 */
+	autosave_timer_ = new QTimer(this);
+	autosave_timer_->setSingleShot(true);
+	autosave_timer_->setInterval(800);
+	connect(autosave_timer_, &QTimer::timeout,
+		this, [this]() {
+			save_sessions();
+			save_ui_settings();
+		});
+
 	setup_ui();
 	restore_ui_settings();
 
@@ -943,6 +960,16 @@ shared_ptr<Session> MainWindow::add_session()
 
 	shared_ptr<Session> session = make_shared<Session>(*device_manager_, name);
 
+	connect(session.get(), &Session::config_changed,
+		this, &MainWindow::schedule_save_sessions);
+	/*
+	 * A page turns into something worth saving the moment its device
+	 * lands — a file page is empty until load_init_file has read the
+	 * capture, and a board page changes identity on re-attach. Without
+	 * this hook the debounced save never learns of either.
+	 */
+	connect(session.get(), &Session::device_changed,
+		this, &MainWindow::schedule_save_sessions);
 	connect(session.get(), SIGNAL(add_view(ViewType, Session*)),
 		this, SLOT(on_add_view(ViewType, Session*)));
 	connect(session.get(), SIGNAL(name_changed()),
@@ -3204,6 +3231,12 @@ void MainWindow::add_default_session()
 
 	report_stalled_devices();
 }
+void MainWindow::schedule_save_sessions()
+{
+	if (autosave_timer_)
+		autosave_timer_->start();
+}
+
 void MainWindow::save_sessions()
 {
 	QSettings settings;
@@ -3222,6 +3255,26 @@ void MainWindow::save_sessions()
 		// Ignore sessions using the demo device or no device at all
 		if (!session || !session->device())
 			continue;
+
+		/*
+		 * A page showing a capture file is remembered by the file it
+		 * holds: the next start reopens that file, and its setup — the
+		 * channel names, colors, decoder stack — comes back from the
+		 * setup below, the same way a board page's does.
+		 */
+		const shared_ptr<devices::SessionFile> file_device =
+			dynamic_pointer_cast< devices::SessionFile >
+			(session->device());
+		if (file_device) {
+			settings.beginGroup("Session" + QString::number(id++));
+			settings.remove("");
+			settings.setValue("device_type", "sessionfile");
+			settings.setValue("file",
+				QString::fromStdString(file_device->full_name()));
+			session->save_setup(settings);
+			settings.endGroup();
+			continue;
+		}
 
 		shared_ptr<devices::HardwareDevice> device =
 			dynamic_pointer_cast< devices::HardwareDevice >
@@ -3281,6 +3334,19 @@ void MainWindow::restore_sessions()
 
 	for (int i = 0; i < session_count; i++) {
 		settings.beginGroup("Session" + QString::number(i));
+
+		/*
+		 * A page saved as a capture file comes back by reopening the
+		 * file; its own page and setup return with it. A file page
+		 * never takes over the capture page that start-up made.
+		 */
+		if (settings.value("device_type").toString() == "sessionfile") {
+			const QString fname = settings.value("file").toString();
+			settings.endGroup();
+			if (!fname.isEmpty() && QFile::exists(fname))
+				add_session_with_file(fname.toStdString(), "", "");
+			continue;
+		}
 
 		if (i == 0) {
 			if (capture_page)

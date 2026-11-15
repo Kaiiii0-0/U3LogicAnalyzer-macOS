@@ -277,6 +277,10 @@ public:
 	void add_generated_signal(shared_ptr<data::SignalBase> signal);
 	void remove_generated_signal(shared_ptr<data::SignalBase> signal);
 
+	/* Signal-to-signal wiring from a channel's editable state into
+	 * config_changed(); called for every signalbase this session grows. */
+	void hook_config_changes(const std::shared_ptr<data::SignalBase> &base);
+
 	uint64_t get_triggers_offs();
 	void feed_in_trigger(uint64_t trigger_offs);
 	void update_device_manager(DeviceManager *device_manager);
@@ -352,6 +356,14 @@ Q_SIGNALS:
 	void device_changed();
 
 	void signals_changed();
+
+	/*
+	 * Something the session state files carry has moved: a channel was
+	 * renamed or recolored, one was toggled, the capture settled. The
+	 * main window listens to this to write the session state files on
+	 * the fly, so a crash cannot take the arrangement with it.
+	 */
+	void config_changed();
 
 	void name_changed();
 

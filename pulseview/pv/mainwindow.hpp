@@ -159,6 +159,13 @@ public:
 
 	void save_sessions();
 	void restore_sessions();
+
+	/*
+	 * Writes the session state files a beat after something changed —
+	 * a channel rename, a color, a capture settling — instead of only
+	 * at a clean exit. A crash then costs at most one debounce period.
+	 */
+	void schedule_save_sessions();
 	void add_default_setting();
 	/* Starts the hot-plug watcher on the page in front. It is not tied to a board
 	 * page: a run that only opens files still has to notice a board later. */
@@ -502,6 +509,10 @@ private:
 	 * the board is taken for gone: a scan can miss one while the bus is
 	 * being re-enumerated. */
 	bool attach_retry_done_ = false;
+
+	/* Debounce behind schedule_save_sessions(): one write serves the
+	 * burst of changes a rename or a settled capture produces. */
+	QTimer *autosave_timer_ = nullptr;
 
 	/* An upgrade holds its page masked until word comes that the board is
 	 * back. That word crosses threads, so it is never the only way out: this

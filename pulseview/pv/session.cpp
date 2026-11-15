@@ -1497,6 +1497,7 @@ uint32_t Session::get_next_signal_index(data::SignalBase::ChannelType type)
 void Session::add_generated_signal(shared_ptr<data::SignalBase> signal)
 {
 	signalbases_.push_back(signal);
+	hook_config_changes(signal);
 
 	for (shared_ptr<views::ViewBase>& view : views_)
 		view->add_signalbase(signal);
@@ -1529,6 +1530,7 @@ shared_ptr<data::DecodeSignal> Session::add_decode_signal()
 		signal = make_shared<data::DecodeSignal>(*this);
 
 		signalbases_.push_back(signal);
+		hook_config_changes(signal);
 
 		// Add the decode signal to all views
 		for (shared_ptr<views::ViewBase>& view : views_)
@@ -1703,6 +1705,34 @@ void Session::set_capture_state(capture_state state)
 	}
 
 	capture_state_changed(state);
+
+	/*
+	 * A capture that just ended is when the device setup is at its most
+	 * settled: rates, channel names and colors are as the user last left
+	 * them. This is also the one moment a capture-page state file is
+	 * guaranteed meaningful, so nudge the autosave here — the main
+	 * window debounces the writes.
+	 */
+	if (state == Stopped)
+		config_changed();
+}
+
+/*
+ * Route the state the session files carry — channel name, color, enabled
+ * state, conversion — into config_changed(), which the main window uses
+ * to write the session state files on the fly instead of only at a clean
+ * exit. A crash then takes at most the last debounce interval with it.
+ */
+void Session::hook_config_changes(const shared_ptr<data::SignalBase> &base)
+{
+	connect(base.get(), &data::SignalBase::name_changed,
+		this, &Session::config_changed);
+	connect(base.get(), &data::SignalBase::color_changed,
+		this, &Session::config_changed);
+	connect(base.get(), &data::SignalBase::enabled_changed,
+		this, &Session::config_changed);
+	connect(base.get(), &data::SignalBase::conversion_type_changed,
+		this, &Session::config_changed);
 }
 
 void Session::update_signals()
@@ -1810,7 +1840,8 @@ void Session::update_signals()
 
 				connect(this, SIGNAL(capture_state_changed(int)),
 					signalbase.get(), SLOT(on_capture_state_changed(int)));
-				
+
+				hook_config_changes(signalbase);
 				break;
 
 			case SR_CHANNEL_ANALOG:
@@ -1823,6 +1854,7 @@ void Session::update_signals()
 
 				connect(this, SIGNAL(capture_state_changed(int)),
 					signalbase.get(), SLOT(on_capture_state_changed(int)));
+				hook_config_changes(signalbase);
 				break;
 			}
 		}
