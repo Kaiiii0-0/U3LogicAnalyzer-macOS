@@ -548,9 +548,11 @@ int cmd_decode(int argc, char **argv)
 	g_string_append_c(j, ',');
 	json_kv_u64(j, "total_rows", c.total_rows);
 	g_string_append_c(j, ',');
+	json_kv_u64(j, "filtered_rows", g_slist_length(c.rows));
+	g_string_append_c(j, ',');
 	json_kv_u64(j, "returned", (uint64_t)MIN(g_slist_length(c.rows), (guint)max_rows));
 	g_string_append_c(j, ',');
-	json_kv_bool(j, "truncated", c.total_rows > (uint64_t)max_rows);
+	json_kv_bool(j, "truncated", g_slist_length(c.rows) > (guint)max_rows);
 	g_string_append_c(j, ',');
 	json_kv_bool(j, "windowed", f.have_from || f.have_to);
 	g_string_append_c(j, ',');
