@@ -156,6 +156,15 @@ MainWindow::MainWindow(QWidget *parent) :
 	sessions_.resize(0);
 	setup_ui();
 	restore_ui_settings();
+
+	/*
+	 * Captures handed over by u3ctl over the IPC socket, or by the
+	 * desktop as open-document events, land here as their own session
+	 * page, exactly as if they had been opened from the menu.
+	 */
+	if (Application *const app = qobject_cast<Application *>(QCoreApplication::instance()))
+		connect(app, &Application::fileOpenRequested,
+			this, &MainWindow::on_open_file_requested);
 }
 
 bool MainWindow::checkSystemRequirements()

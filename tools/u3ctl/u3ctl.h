@@ -85,6 +85,13 @@ int cmd_capture(int argc, char **argv);
 int cmd_devices_list(int argc, char **argv);
 int cmd_capabilities(int argc, char **argv);
 
+/*---- ipc.c ----------------------------------------------------------------- */
+
+/* 0 = opened in the running GUI instance, 1 = no instance, <0 = error. */
+int open_in_gui(const char *path);
+void cmd_open_json(const char *path, int ret);
+int cmd_open(int argc, char **argv);
+
 /*---- sessionfile.c ------------------------------------------------------- */
 
 int cmd_session_info(int argc, char **argv);

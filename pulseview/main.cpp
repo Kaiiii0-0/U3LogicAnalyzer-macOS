@@ -224,6 +224,7 @@ int main(int argc, char *argv[])
 	int ret = 0;
 	shared_ptr<sigrok::Context> context;
 	string open_file_format, open_setup_file, driver;
+	string open_existing_file;
 	driver = "";
 	vector<string> open_files;
 	bool restore_sessions = true;
@@ -245,6 +246,19 @@ int main(int argc, char *argv[])
 #endif
 
 	Application a(argc, argv);
+
+	/*
+	 * --open-existing asks for the capture to be shown by the instance
+	 * that is already running instead of starting another one. When no
+	 * instance is listening, this invocation goes on and loads the file
+	 * itself, which is what the first run wants.
+	 */
+	if (!open_existing_file.empty()) {
+		if (Application::forward_to_running_gui(
+				QString::fromStdString(open_existing_file)))
+			return 0;
+		open_files.emplace_back(open_existing_file);
+	}
 
 	/*
 	 * Say which binary is running. The application is often installed next
@@ -376,6 +390,7 @@ int main(int argc, char *argv[])
 			{"driver", required_argument, nullptr, 'd'},
 			{"dont-scan", no_argument, nullptr, 'D'},
 			{"input-file", required_argument, nullptr, 'i'},
+			{"open-existing", required_argument, nullptr, 'O'},
 			{"settings", required_argument, nullptr, 's'},
 			{"input-format", required_argument, nullptr, 'I'},
 			{"screenshot", required_argument, nullptr, 'S'},
@@ -386,7 +401,7 @@ int main(int argc, char *argv[])
 		};
 
 		const int c = getopt_long(argc, argv,
-			"h?VDcl:d:i:s:I:gS:", long_options, nullptr);
+			"h?VDcl:d:i:O:s:I:gS:", long_options, nullptr);
 		if (c == -1)
 			break;
 
@@ -431,6 +446,10 @@ int main(int argc, char *argv[])
 
 		case 'i':
 			open_files.emplace_back(optarg);
+			break;
+
+		case 'O':
+			open_existing_file = optarg;
 			break;
 
 		case 's':

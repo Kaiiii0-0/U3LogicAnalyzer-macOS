@@ -31,6 +31,15 @@
 #include <QStyleHints>
 #endif
 
+#include <QFileOpenEvent>
+#include <QLocalSocket>
+
+#ifdef Q_OS_WIN
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
 #include <boost/version.hpp>
 
 #ifdef ENABLE_STACKTRACE
@@ -116,6 +125,112 @@ Application::Application(int &argc, char* argv[]) :
 				settings.apply_theme();
 		});
 #endif
+
+	start_ipc_server();
+}
+
+QString Application::ipc_socket_name()
+{
+#ifdef Q_OS_WIN
+	const QString user = QString::fromUtf8(qgetenv("USERNAME"));
+	return QString("\\\\.\\pipe\\u3la-open-%1").arg(user.isEmpty() ?
+		QStringLiteral("unknown") : user);
+#else
+	return QString("/tmp/u3la-open-%1.sock").arg(getuid());
+#endif
+}
+
+bool Application::forward_to_running_gui(const QString &path)
+{
+	QLocalSocket socket;
+	socket.connectToServer(ipc_socket_name());
+	if (!socket.waitForConnected(1500))
+		return false;
+
+	socket.write(path.toUtf8() + '\n');
+	if (!socket.waitForBytesWritten(1000))
+		return false;
+
+	/* The instance answers with "OK\n" once it has queued the path for
+	 * opening; anything less than that is treated as no delivery. */
+	if (!socket.waitForReadyRead(2000))
+		return false;
+
+	return socket.readAll().startsWith("OK");
+}
+
+void Application::start_ipc_server()
+{
+	const QString name = ipc_socket_name();
+
+	/* A leftover socket file from a crashed instance would block the
+	 * listen; a live instance does not, since its removal only unlinks
+	 * the path, and that instance then simply misses further opens. */
+	QLocalServer::removeServer(name);
+
+	ipc_server_ = new QLocalServer(this);
+	ipc_server_->setSocketOptions(QLocalServer::UserAccessOption);
+	if (!ipc_server_->listen(name)) {
+		delete ipc_server_;
+		ipc_server_ = nullptr;
+		return;
+	}
+
+	connect(ipc_server_, &QLocalServer::newConnection,
+		this, &Application::on_ipc_new_connection);
+}
+
+void Application::on_ipc_new_connection()
+{
+	while (QLocalSocket *const conn = ipc_server_->nextPendingConnection()) {
+		const auto process = [this, conn]() {
+			QByteArray &buf = ipc_buf_[conn];
+			buf += conn->readAll();
+			int idx;
+			while ((idx = buf.indexOf('\n')) >= 0) {
+				const QString path = QString::fromUtf8(
+					buf.left(idx).trimmed());
+				buf.remove(0, idx + 1);
+				if (!path.isEmpty()) {
+					Q_EMIT fileOpenRequested(path);
+					conn->write("OK\n");
+					conn->flush();
+					conn->disconnectFromServer();
+					ipc_buf_.remove(conn);
+					return;
+				}
+			}
+		};
+		/* The connection context routes the lambda onto the main
+		 * thread, where the window's slots live. */
+		connect(conn, &QLocalSocket::readyRead, this, process);
+		/*
+		 * The client may have written before Qt even handed the
+		 * connection over; QLocalSocket does not re-announce bytes
+		 * that were already buffered, so answer them right here.
+		 */
+		if (conn->bytesAvailable() > 0)
+			process();
+		connect(conn, &QLocalSocket::disconnected,
+			conn, &QObject::deleteLater);
+		connect(conn, &QObject::destroyed, this, [this, conn]() {
+			ipc_buf_.remove(conn);
+		});
+	}
+}
+
+bool Application::event(QEvent *event)
+{
+	/* macOS hands over files opened from Finder, or via `open`, as
+	 * open-document events; they take the same road as the IPC ones. */
+	if (event->type() == QEvent::FileOpen) {
+		QFileOpenEvent *const open = static_cast<QFileOpenEvent *>(event);
+		if (!open->file().isEmpty()) {
+			Q_EMIT fileOpenRequested(open->file());
+			return true;
+		}
+	}
+	return QApplication::event(event);
 }
 
 const QStringList Application::get_languages() const

@@ -740,6 +740,8 @@ int main(int argc, char **argv)
 		ret = cmd_decoders_info(clean_argc - 3, clean_argv + 3);
 	} else if (!strcmp(cmd, "export")) {
 		ret = cmd_export(clean_argc - 2, clean_argv + 2);
+	} else if (!strcmp(cmd, "open")) {
+		ret = cmd_open(clean_argc - 2, clean_argv + 2);
 	} else {
 		usage();
 	}

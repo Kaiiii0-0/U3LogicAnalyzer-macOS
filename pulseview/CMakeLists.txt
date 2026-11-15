@@ -126,7 +126,7 @@ else()
 	message(FATAL_ERROR "QT_VERSION_MAJOR must be 5 or 6 (got '${QT_VERSION_MAJOR}')")
 endif()
 
-find_package(Qt${QT_VERSION_MAJOR} ${QT_MIN_VERSION} COMPONENTS Core Gui LinguistTools Widgets Svg REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} ${QT_MIN_VERSION} COMPONENTS Core Gui LinguistTools Widgets Svg Network REQUIRED)
 
 message(STATUS "Qt version: ${Qt${QT_VERSION_MAJOR}_VERSION}")
 
@@ -158,7 +158,7 @@ if(WIN32)
 	endif()
 endif()
 
-set(QT_LIBRARIES Qt${QT_VERSION_MAJOR}::Gui Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Svg)
+set(QT_LIBRARIES Qt${QT_VERSION_MAJOR}::Gui Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Svg Qt${QT_VERSION_MAJOR}::Network)
 
 set(BOOSTCOMPS filesystem serialization system)
 if(ENABLE_TESTS)

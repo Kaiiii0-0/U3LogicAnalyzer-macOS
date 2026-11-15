@@ -30,6 +30,7 @@ add_executable(u3ctl
 	capture.c
 	sessionfile.c
 	decode.c
+	ipc.c
 )
 
 target_compile_definitions(u3ctl PRIVATE

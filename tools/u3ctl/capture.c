@@ -11,6 +11,9 @@
 
 #include "u3ctl.h"
 
+#include <limits.h>
+#include <stdlib.h>
+
 struct capture_ctx {
 	struct sr_session *session;
 	struct sr_dev_inst *sdi;
@@ -43,6 +46,7 @@ struct cap_opts {
 	char *out_path;
 	const char *fmt;
 	gboolean overwrite;
+	gboolean open_in_gui;
 };
 
 struct trig_spec {
@@ -125,6 +129,8 @@ static void parse_capture_args(int argc, char **argv, struct cap_opts *o)
 			o->out_path = g_strdup(argv[++i]);
 		} else if (!strcmp(a, "--overwrite")) {
 			o->overwrite = TRUE;
+		} else if (!strcmp(a, "--open")) {
+			o->open_in_gui = TRUE;
 		} else if (!strcmp(a, "--format") && i + 1 < argc) {
 			o->fmt = argv[++i];
 		} else {
@@ -448,6 +454,18 @@ int cmd_capture(int argc, char **argv)
 	uint64_t rate = get_samplerate(d, sdi);
 	double duration = rate ? (double)c.samples_received / rate : 0.0;
 
+	/* Hand the fresh capture to the already-running GUI, when there is
+	 * one. Silence is not an error: the .sr file is on disk either way
+	 * and the JSON below says what happened. */
+	int gui_open = -1;
+	if (o.open_in_gui) {
+		char abspath[PATH_MAX];
+		const char *open_path = o.out_path;
+		if (realpath(o.out_path, abspath))
+			open_path = abspath;
+		gui_open = open_in_gui(open_path);
+	}
+
 	j = g_string_new(NULL);
 	g_string_append(j, "{");
 	json_kv_str(j, "file", o.out_path);
@@ -473,6 +491,18 @@ int cmd_capture(int argc, char **argv)
 	json_kv_bool(j, "stopped_by_limit", c.hit_limit);
 	g_string_append_c(j, ',');
 	json_kv_bool(j, "stopped_by_timeout", c.hit_timeout);
+	if (o.open_in_gui) {
+		g_string_append_c(j, ',');
+		if (gui_open == 0)
+			json_kv_str(j, "gui", "existing-instance");
+		else if (gui_open == 1) {
+			json_kv_bool(j, "gui_opened", FALSE);
+			json_kv_str(j, "reason", "no running GUI instance");
+		} else {
+			json_kv_bool(j, "gui_opened", FALSE);
+			json_kv_str(j, "reason", "ipc error");
+		}
+	}
 	g_string_append(j, "}");
 	printf("%s\n", j->str);
 	g_string_free(j, TRUE);

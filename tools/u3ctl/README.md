@@ -24,8 +24,9 @@ u3ctl capture [--driver demo|wch-ch32h417-libusb] [--conn SUBSTR]
               [--rate 16M] [--channels 8] [--samples 1M | --time 50ms]
               [--trigger "D0:rising+D1:high"] …    # 重复 --trigger = 顺序多级
               [--pre 10] [--threshold 1.2V] [--mode logic|adc]
-              [--timeout 15] [--out FILE.sr] [--overwrite]
+              [--timeout 15] [--out FILE.sr] [--overwrite] [--open]
               [--demo-pattern random]              # demo 驱动专用
+u3ctl open FILE.sr                                 # 推送给已运行的 GUI 实例
 u3ctl session info FILE.sr                         # 采样率/样本数/时长/通道/触发
 u3ctl sessions list [--dir DIR] / session delete FILE.sr
 u3ctl decode FILE.sr --stack i2c[,eeprom24xx]      # 堆叠解码
@@ -52,6 +53,21 @@ devices list → capabilities → capture → session info
 ```
 
 `.sr` 文件可直接被 GUI(`U3LogicAnalyzer -i file.sr`)打开回看。
+
+### 在已有 GUI 实例中打开(--open / open)
+
+GUI 常驻时,`capture --open` 或 `u3ctl open FILE.sr` **不会新开窗口**:CLI
+直连运行中实例的本地 IPC 通道(`QLocalServer`,路径 `/tmp/u3la-open-<uid>.sock`),
+GUI 在自己的窗口里新开一个会话页并回 JSON:
+
+```json
+{"file":"captures/x.sr", ..., "gui":"existing-instance"}
+```
+
+没有 GUI 在运行时返回 `{"gui_opened":false,"reason":"no running GUI instance"}`
+且采集结果照常落盘;GUI 未启动时也可用 `U3LogicAnalyzer --open-existing FILE.sr`
+(已有实例则转发给它,没有则以自己加载该文件启动)。macOS 的 Finder 双击 /
+`open -a` 打开文档事件走同一条路(`QFileOpenEvent`)。Windows 命名管道客户端待接。
 
 ## 测试
 

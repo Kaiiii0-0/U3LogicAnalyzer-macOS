@@ -28,6 +28,7 @@
 #include <QStringList>
 #include <QTranslator>
 #include <QProcess>
+#include <QLocalServer>
 #include <libsigrokcxx/libsigrokcxx.hpp>
 
 #include "devicemanager.hpp"
@@ -48,6 +49,30 @@ public:
 	const QString get_language_editors(const QString& language) const;
 	void switch_language(const QString& language);
 
+	/*
+	 * Path of the local socket a running instance listens on, so another
+	 * process (u3ctl, or a second invocation of this program) can hand it
+	 * a capture to open instead of starting yet another instance.
+	 */
+	static QString ipc_socket_name();
+
+	/*
+	 * Hand a capture path to the instance that is already running, if any.
+	 * Returns true when it was delivered there; false when no instance is
+	 * listening, and the caller should go on to load the file itself.
+	 */
+	static bool forward_to_running_gui(const QString &path);
+
+Q_SIGNALS:
+	/*
+	 * A capture path arrived over the IPC channel, or as a macOS
+	 * open-document event, and wants to be opened as a new session.
+	 */
+	void fileOpenRequested(const QString &path);
+
+public:
+	bool event(QEvent *event) override;
+
 	void on_setting_changed(const QString &key, const QVariant &value);
 
 	void collect_version_info(pv::DeviceManager &device_manager);
@@ -66,6 +91,12 @@ public:
 
 private:
 	bool notify(QObject *receiver, QEvent *event);
+
+	void start_ipc_server();
+	void on_ipc_new_connection();
+
+	QLocalServer *ipc_server_ = nullptr;
+	QHash<QLocalSocket *, QByteArray> ipc_buf_;
 
 	vector< pair<QString, QString> > version_info_;
 	vector<QString> fw_path_list_;
