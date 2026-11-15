@@ -311,10 +311,16 @@ static void set_device_config(struct cap_opts *o, struct sr_dev_driver *d,
 {
 	int ret;
 
-	/* Channel count first: it re-picks rate tables / unitsize on the U3. */
-	if (o->num_channels > 0 && config_can_set(sdi, SR_CONF_NUM_LOGIC_CHANNELS))
-		set_config_u64(d, sdi, SR_CONF_NUM_LOGIC_CHANNELS, o->num_channels,
-				"num_logic_channels");
+	/* Channel count first: it re-picks rate tables / unitsize on the U3.
+	 * The wch driver reads this as int32 (api.c g_variant_get_int32), so
+	 * the variant must be int32 — a uint64 variant makes the get assert
+	 * and the count come back wrong. */
+	if (o->num_channels > 0 && config_can_set(sdi, SR_CONF_NUM_LOGIC_CHANNELS)) {
+		int ret = sr_config_set(sdi, NULL, SR_CONF_NUM_LOGIC_CHANNELS,
+				g_variant_new_int32((int32_t)o->num_channels));
+		if (ret != SR_OK)
+			die_json("failed to set num_logic_channels: %s", sr_strerror(ret));
+	}
 
 	if (o->samplerate)
 		set_config_u64(d, sdi, SR_CONF_SAMPLERATE, o->samplerate, "samplerate");
@@ -381,11 +387,11 @@ int cmd_capture(int argc, char **argv)
 	if (!d)
 		die_json("driver '%s' not found", o.driver_name ? o.driver_name : U3CTL_DEFAULT_DRIVERS);
 
-	/* Channel-count request: pass as scan option too (demo picks its
-	 * channel count at scan time; the wch driver ignores unknown scan
-	 * options and gets it via config instead). */
+	/* Channel-count as a scan option is DEMO ONLY: demo builds its
+	 * channels at scan time, while the wch driver lists SR_CONF_CONN
+	 * alone as a scanopt and rejects anything else handed to scan. */
 	GSList *scan_opts = NULL;
-	if (o.num_channels > 0) {
+	if (o.num_channels > 0 && !strcmp(d->name, "demo")) {
 		struct sr_config *sopt = g_new0(struct sr_config, 1);
 		sopt->key = SR_CONF_NUM_LOGIC_CHANNELS;
 		sopt->data = g_variant_new_int32((int32_t)o.num_channels);
@@ -425,6 +431,12 @@ int cmd_capture(int argc, char **argv)
 		die_json("srzip output module missing");
 
 	memset(&c, 0, sizeof(c));
+	/*
+	 * The datafeed stops the session at this limit — the real device
+	 * streams until told, so without it a --samples run sat out the
+	 * whole timeout instead of stopping at the count.
+	 */
+	c.limit_samples = o.limit_samples ? o.limit_samples : o.limit_time_samples;
 	c.output = sr_output_new(omod, NULL, sdi, o.out_path);
 	if (!c.output)
 		die_json("failed to create srzip output");
