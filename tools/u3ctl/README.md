@@ -87,8 +87,36 @@ build_u3ctl/u3ctl decode captures/uart.sr --stack uart --channel tx=D0 \
     --pdopt baudrate=100000        # → decoded bytes: ['55', '33', 'AA']
 ```
 
-## 真机(macOS)注意
+## MCP 原生调用(P3)
 
+`tools/mcp/u3la_mcp/server.py` 是**零依赖**的 MCP stdio server(手写
+JSON-RPC 子集,任何 CPython ≥3.9 可跑,无需 pip),把 u3ctl 的 17 个命令
+映射为原生 MCP 工具:`u3_list_devices / u3_capabilities / u3_capture /
+u3_session_info / u3_profile / u3_activity / u3_measure / u3_edges /
+u3_sample / u3_slice / u3_overview / u3_decode / u3_list_decoders /
+u3_decoder_info / u3_render / u3_export / u3_open_in_gui`。工具描述内嵌了
+全部护栏(USB 独占、软件触发、截断契约、PD 选项匹配)。
+
+**`u3_render` 返回 image content block**——多模态 agent 直接"看"波形,
+配合 decode 的样本坐标实现"解出异常→放大看图"闭环。
+
+已注册(本机):
+- **ZCode**:`~/.zcode/cli/config.json` → `mcp.servers`(下次会话生效,
+  工具名 `mcp__u3-logic-analyzer__u3_capture` 等)
+- **Codex**:`~/.codex/config.toml` → `[mcp_servers.u3-logic-analyzer]`
+- **OpenCode**:`~/.config/opencode/opencode.json` → `mcp.u3-logic-analyzer`
+
+其它客户端通用注册:
+
+```json
+{ "mcpServers": { "u3-logic-analyzer": {
+    "command": "<repo>/tools/mcp/u3la_mcp/launch.sh", "args": [] } } }
+```
+
+协议已验证:initialize/tools/list/tools/call 全通,真机数据上
+session_info/profile/decode/render(image block)端到端通过。
+
+## 真机(macOS)注意
 - 驱动名 `wch-ch32h417-libusb`;GUI 正在采集时设备被独占,`capture` 会报错并提示。
 - 触发为**软件触发**(0/1/上升/下降/边沿,支持多级顺序);"按协议内容触发"
   不存在——全量采集后用 `decode --search` 事后定位。
