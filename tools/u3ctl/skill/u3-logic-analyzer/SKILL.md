@@ -101,6 +101,15 @@ SIGTERM(即 capture-stop)是唯一保证 .sr 完整的出口;设备独占,活跃
 `"gui_opened":false,"reason":"no running GUI instance"`(文件仍在磁盘,不算失败)。
 也可以让用户自己跑 `U3LogicAnalyzer -i FILE.sr`。
 
+## MCP 原生调用(可选)
+
+若已注册 MCP server(`tools/mcp/u3la_mcp/launch.sh`,仓库 README 有各客户端
+注册片段),则优先用原生工具而非 CLI:工具名与子命令一一对应
+(`u3_capture`/`u3_profile`/`u3_decode`/`u3_render`/`u3_capture_start/status/
+stop/jobs`…,共 21 个),参数与本文件命令面的选项同名(kebab→snake);
+`u3_render` 直接返回 PNG image block。本 skill 的流程、护栏、排错对 MCP
+工具同样适用。
+
 ## 排错
 
 - `driver not found`:build.sh 步骤 1-3 没跑全,或 install/ 缺失 → 重建
